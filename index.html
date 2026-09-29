@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -19,10 +19,76 @@
   <!-- Chart.js para o Gráfico de Rosca -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+    <!-- Firebase SDKs (Compat v10) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
   <!-- Estilos customizados -->
   <link rel="stylesheet" href="styles.css">
 </head>
-<body class="sidebar-expanded">
+<body class="sidebar-expanded not-authenticated">
+
+  <!-- ================= TELA DE LOGIN / BLOQUEIO DE ACESSO (FIREBASE) ================= -->
+  <div class="login-screen-overlay" id="loginScreenOverlay">
+    <div class="login-card">
+      <div class="login-brand">
+        <div class="login-logo-wrap">
+          <img src="logo.png" alt="Logo Igreja Sementeira" class="login-logo">
+        </div>
+        <h2 class="login-title">Igreja Evangélica Sementeira</h2>
+        <span class="login-sub">Piedade • Sistema de Gestão</span>
+      </div>
+
+      <div class="login-security-tag">
+        <i class="ph-bold ph-shield-check"></i>
+        <span>Acesso Restrito & Protegido</span>
+      </div>
+
+      <form id="loginForm" class="login-form">
+        <div class="form-group">
+          <label for="loginUserInput">Usuário:</label>
+          <div class="input-with-icon">
+            <i class="ph-bold ph-user input-icon"></i>
+            <input list="loginUserList" type="text" id="loginUserInput" class="form-control login-input" placeholder="Ex: Vinicius, Edna ou IES Piedade" required autocomplete="username">
+            <datalist id="loginUserList">
+              <option value="Vinicius (Administrador)"></option>
+              <option value="Edna (Visualização)"></option>
+              <option value="IES Piedade (Visualização)"></option>
+            </datalist>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="loginPasswordInput">Senha:</label>
+          <div class="input-with-icon password-input-wrap">
+            <i class="ph-bold ph-lock-key input-icon"></i>
+            <input type="password" id="loginPasswordInput" class="form-control login-input" placeholder="Digite sua senha" required autocomplete="current-password">
+            <button type="button" class="btn-toggle-password" id="btnToggleLoginPassword" title="Mostrar/ocultar senha">
+              <i class="ph-bold ph-eye" id="togglePasswordIcon"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="login-alert-error" id="loginAlertError" style="display: none;">
+          <i class="ph-bold ph-warning-circle"></i>
+          <span id="loginErrorText">Usuário ou senha incorretos.</span>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block btn-login-submit" id="btnLoginSubmit">
+          <span class="btn-text" id="btnLoginBtnText">
+            <i class="ph-bold ph-sign-in"></i>
+            <span>Entrar no Sistema</span>
+          </span>
+        </button>
+      </form>
+
+      <div class="login-card-footer">
+        <small><i class="ph-bold ph-lock"></i> Autenticação Criptografada via Firebase</small>
+      </div>
+    </div>
+  </div>
+
   <!-- Overlay para telas móveis / tablets ao abrir sidebar -->
   <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
@@ -108,9 +174,12 @@
         <div class="user-quick-profile">
           <div class="avatar-status-dot online"></div>
           <div class="profile-info">
-            <strong>IES Piedade</strong>
-            <small>Painel Administrativo</small>
+            <strong id="sideUserName">IES Piedade</strong>
+            <small id="sideUserRole">Painel Administrativo</small>
           </div>
+          <button class="btn-logout" id="btnSidebarLogout" title="Sair da Conta">
+            <i class="ph-bold ph-sign-out"></i>
+          </button>
         </div>
       </div>
     </aside>
@@ -141,16 +210,31 @@
           </div>
 
           <!-- Ação Rápida: Cadastrar Membro -->
-          <button class="btn btn-primary" id="btnTopNovoMembro">
+          <button class="btn btn-primary admin-only" id="btnTopNovoMembro">
             <i class="ph-bold ph-user-plus"></i>
             <span>Novo Membro</span>
           </button>
 
           <!-- Ação Rápida: Novo Evento -->
-          <button class="btn btn-secondary" id="btnTopNovoEvento">
+          <button class="btn btn-secondary admin-only" id="btnTopNovoEvento">
             <i class="ph-bold ph-calendar-plus"></i>
             <span>Novo Evento</span>
           </button>
+
+          <!-- Perfil do Usuário Conectado -->
+          <div class="topbar-user-badge" id="topbarUserBadge">
+            <div class="topbar-user-info">
+              <div class="user-avatar-tag" id="topbarUserAvatar">V</div>
+              <div class="user-text-tag">
+                <span class="topbar-user-name" id="topbarUserName">Vinicius</span>
+                <span class="topbar-role-tag badge-admin" id="topbarUserRoleBadge">Admin</span>
+              </div>
+            </div>
+            <button class="btn-topbar-logout" id="btnTopbarLogout" title="Sair do Sistema">
+              <i class="ph-bold ph-sign-out"></i>
+              <span>Sair</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -419,6 +503,7 @@
 
         <!-- ================= VISÃO: QUADRO DE MEMBROS ================= -->
         <section class="view-section" id="viewMembros">
+          <div class="viewer-readonly-notice"><i class="ph-bold ph-shield-check"></i><span><strong>Modo de Leitura:</strong> Acesso somente para consulta. Criação, edição e exclusão são restritas ao Administrador.</span></div>
           <div class="filters-card">
             <div class="filter-search-input">
               <i class="ph-bold ph-magnifying-glass"></i>
@@ -519,6 +604,7 @@
 
         <!-- ================= VISÃO: EVENTOS ================= -->
         <section class="view-section" id="viewEventos">
+          <div class="viewer-readonly-notice"><i class="ph-bold ph-shield-check"></i><span><strong>Modo de Leitura:</strong> Acesso somente para consulta. Criação, edição e exclusão são restritas ao Administrador.</span></div>
           <div class="table-responsive-card">
             <table class="data-table">
               <thead>
@@ -671,8 +757,9 @@
 
         <!-- ================= VISÃO: CONFIGURAÇÕES ================= -->
         <section class="view-section" id="viewConfiguracoes">
+          <div class="viewer-readonly-notice"><i class="ph-bold ph-shield-check"></i><span><strong>Modo de Leitura:</strong> Acesso somente para consulta. Criação, edição e exclusão são restritas ao Administrador.</span></div>
           <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
-            <button class="btn btn-primary" id="btnSalvarConfig">
+            <button class="btn btn-primary admin-only" id="btnSalvarConfig">
               <i class="ph-bold ph-floppy-disk"></i>
               <span>Salvar Alterações</span>
             </button>

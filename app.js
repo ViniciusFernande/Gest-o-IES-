@@ -1,7 +1,74 @@
-﻿/**
+/**
  * IGREJA EVANGÉLICA SEMENTEIRA (IES - PIEDADE)
  * Painel Administrativo de Gestão de Membros, Aniversariantes e Eventos
  */
+
+
+// ================= FIREBASE & AUTENTICAÇÃO =================
+const firebaseConfig = {
+  apiKey: "AIzaSyCcFWQN6AxXOkpiAHWYttSTErCmbX_WFd8",
+  authDomain: "gestao-ies.firebaseapp.com",
+  projectId: "gestao-ies",
+  storageBucket: "gestao-ies.firebasestorage.app",
+  messagingSenderId: "1023539942701",
+  appId: "1:1023539942701:web:26f97066b0841da1f5efa4"
+};
+
+let auth = null;
+let db = null;
+let currentUser = null; // { email, name, role }
+let firestoreUnsubs = [];
+
+try {
+  if (typeof firebase !== 'undefined') {
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    auth = firebase.auth();
+    db = firebase.firestore();
+  }
+} catch (e) {
+  console.error("Erro ao inicializar Firebase:", e);
+}
+
+// Perfis e Apelidos (Aliases) mapeados para os e-mails reais do Firebase
+const USER_PROFILES = {
+  'vinicius.fernandes1129@gmail.com': { name: 'Vinicius', role: 'admin' },
+  'edna.fernandes1129@gmail.com': { name: 'Edna', role: 'viewer' },
+  'sementeirapiedade@gmail.com': { name: 'IES Piedade', role: 'viewer' }
+};
+
+const USER_ALIASES = {
+  'vinicius': 'vinicius.fernandes1129@gmail.com',
+  'vinícius': 'vinicius.fernandes1129@gmail.com',
+  'vinicius (administrador)': 'vinicius.fernandes1129@gmail.com',
+  'admin': 'vinicius.fernandes1129@gmail.com',
+  'edna': 'edna.fernandes1129@gmail.com',
+  'edna (visualização)': 'edna.fernandes1129@gmail.com',
+  'edna (visualizacao)': 'edna.fernandes1129@gmail.com',
+  'ies': 'sementeirapiedade@gmail.com',
+  'ies piedade': 'sementeirapiedade@gmail.com',
+  'ies piedade (visualização)': 'sementeirapiedade@gmail.com',
+  'ies piedade (visualizacao)': 'sementeirapiedade@gmail.com',
+  'sementeira': 'sementeirapiedade@gmail.com',
+  'sementeira piedade': 'sementeirapiedade@gmail.com'
+};
+
+function resolverEmailUsuario(input) {
+  if (!input) return '';
+  const limpo = input.trim().toLowerCase();
+  if (USER_ALIASES[limpo]) {
+    return USER_ALIASES[limpo];
+  }
+  if (limpo.includes('@')) {
+    return limpo;
+  }
+  return '';
+}
+
+function isUserAdmin() {
+  return currentUser && currentUser.role === 'admin';
+}
 
 const STORAGE_MEMBROS = 'ies_gestao_membros_v1';
 const STORAGE_EVENTOS = 'ies_gestao_eventos_v1';
@@ -217,6 +284,251 @@ function getInitialEvents() {
 }
 
 // Carregar & Salvar Dados
+
+// ================= FUNÇÕES DE AUTENTICAÇÃO E SINCRONIZAÇÃO FIREBASE =================
+function configurarAutenticacao() {
+  const loginOverlay = document.getElementById('loginScreenOverlay');
+  const loginForm = document.getElementById('loginForm');
+  const userInput = document.getElementById('loginUserInput');
+  const pwdInput = document.getElementById('loginPasswordInput');
+  const togglePwdBtn = document.getElementById('btnToggleLoginPassword');
+  const togglePwdIcon = document.getElementById('togglePasswordIcon');
+  const alertError = document.getElementById('loginAlertError');
+  const errorText = document.getElementById('loginErrorText');
+  const submitBtn = document.getElementById('btnLoginSubmit');
+  const btnTopbarLogout = document.getElementById('btnTopbarLogout');
+  const btnSidebarLogout = document.getElementById('btnSidebarLogout');
+
+  // Alternar visualização da senha (olho)
+  if (togglePwdBtn && pwdInput) {
+    togglePwdBtn.addEventListener('click', (ev) => {
+      ev.preventDefault();
+      const isPwd = pwdInput.type === 'password';
+      pwdInput.type = isPwd ? 'text' : 'password';
+      if (togglePwdIcon) {
+        togglePwdIcon.className = isPwd ? 'ph-bold ph-eye-slash' : 'ph-bold ph-eye';
+      }
+    });
+  }
+
+  // Submissão do Formulário de Login
+  if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (alertError) alertError.style.display = 'none';
+
+      const typedUser = userInput ? userInput.value : '';
+      const typedPwd = pwdInput ? pwdInput.value : '';
+      const email = resolverEmailUsuario(typedUser);
+
+      if (!email) {
+        if (errorText) errorText.textContent = 'Usuário não reconhecido. Use Vinicius, Edna ou IES Piedade.';
+        if (alertError) alertError.style.display = 'flex';
+        return;
+      }
+
+      if (!typedPwd) {
+        if (errorText) errorText.textContent = 'Por favor, informe a senha.';
+        if (alertError) alertError.style.display = 'flex';
+        return;
+      }
+
+      // Feedback visual de carregamento
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="ph-bold ph-spinner ph-spin"></i> <span>Entrando...</span>';
+      }
+
+      try {
+        if (!auth) throw new Error('Firebase Auth não inicializado.');
+        await auth.signInWithEmailAndPassword(email, typedPwd);
+      } catch (err) {
+        console.error('Falha no login:', err);
+        let msg = 'Usuário ou senha incorretos.';
+        if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+          msg = 'Senha incorreta para este usuário.';
+        } else if (err.code === 'auth/user-not-found') {
+          msg = 'Usuário não cadastrado no Firebase Authentication.';
+        } else if (err.code === 'auth/too-many-requests') {
+          msg = 'Muitas tentativas. Aguarde alguns instantes.';
+        } else if (err.code === 'auth/network-request-failed') {
+          msg = 'Erro de conexão com o Firebase.';
+        }
+        if (errorText) errorText.textContent = msg;
+        if (alertError) alertError.style.display = 'flex';
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<span class="btn-text"><i class="ph-bold ph-sign-in"></i> <span>Entrar no Sistema</span></span>';
+        }
+      }
+    });
+  }
+
+  // Logout
+  const realizarLogout = async () => {
+    if (confirm('Deseja realmente sair do sistema?')) {
+      try {
+        if (auth) await auth.signOut();
+      } catch (err) {
+        console.error('Erro ao sair:', err);
+      }
+    }
+  };
+
+  if (btnTopbarLogout) btnTopbarLogout.addEventListener('click', realizarLogout);
+  if (btnSidebarLogout) btnSidebarLogout.addEventListener('click', realizarLogout);
+
+  // Monitorar Estado de Autenticação do Firebase
+  if (auth) {
+    auth.onAuthStateChanged((user) => {
+      if (user) {
+        const emailLower = (user.email || '').toLowerCase();
+        const profile = USER_PROFILES[emailLower] || { name: (user.email || 'Usuário').split('@')[0], role: 'viewer' };
+        currentUser = {
+          email: user.email,
+          name: profile.name,
+          role: profile.role
+        };
+
+        // Remove bloqueio
+        document.body.classList.remove('not-authenticated', 'auth-loading');
+        if (currentUser.role === 'admin') {
+          document.body.classList.add('role-admin');
+          document.body.classList.remove('role-viewer');
+        } else {
+          document.body.classList.add('role-viewer');
+          document.body.classList.remove('role-admin');
+        }
+
+        if (loginOverlay) loginOverlay.style.display = 'none';
+
+        atualizarUiUsuarioLogado();
+        iniciarSincronizacaoFirestore();
+        atualizarTudo();
+      } else {
+        currentUser = null;
+        document.body.classList.remove('role-admin', 'role-viewer');
+        document.body.classList.add('not-authenticated');
+        if (loginOverlay) loginOverlay.style.display = 'flex';
+        if (pwdInput) pwdInput.value = '';
+      }
+    });
+  }
+}
+
+function atualizarUiUsuarioLogado() {
+  if (!currentUser) return;
+  const topName = document.getElementById('topbarUserName');
+  const topRole = document.getElementById('topbarUserRoleBadge');
+  const topAvatar = document.getElementById('topbarUserAvatar');
+  const sideName = document.getElementById('sideUserName');
+  const sideRole = document.getElementById('sideUserRole');
+
+  if (topName) topName.textContent = currentUser.name;
+  if (sideName) sideName.textContent = currentUser.name;
+
+  if (topAvatar) {
+    topAvatar.textContent = currentUser.name.charAt(0).toUpperCase();
+  }
+
+  if (currentUser.role === 'admin') {
+    if (topRole) {
+      topRole.textContent = 'Admin';
+      topRole.className = 'topbar-role-tag badge-admin';
+      topRole.title = 'Acesso total de Administrador';
+    }
+    if (sideRole) sideRole.textContent = 'Administrador Geral';
+  } else {
+    if (topRole) {
+      topRole.textContent = 'Visualização';
+      topRole.className = 'topbar-role-tag badge-viewer';
+      topRole.title = 'Acesso somente leitura';
+    }
+    if (sideRole) sideRole.textContent = 'Modo Visualização';
+  }
+}
+
+function iniciarSincronizacaoFirestore() {
+  if (!db) return;
+
+  // Cancela listeners anteriores se houver
+  firestoreUnsubs.forEach(unsub => { if (typeof unsub === 'function') unsub(); });
+  firestoreUnsubs = [];
+
+  // 1. Sincronizar Membros
+  const unsubMembros = db.collection('membros').onSnapshot((snapshot) => {
+    if (!snapshot.empty) {
+      membros = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      localStorage.setItem(STORAGE_MEMBROS, JSON.stringify(membros));
+      atualizarTudo();
+    } else {
+      if (isUserAdmin()) {
+        migrarDadosIniciaisParaFirestore();
+      }
+    }
+  }, (err) => {
+    console.warn('Firestore Membros aviso:', err);
+  });
+  firestoreUnsubs.push(unsubMembros);
+
+  // 2. Sincronizar Eventos
+  const unsubEventos = db.collection('eventos').onSnapshot((snapshot) => {
+    if (!snapshot.empty) {
+      eventos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      localStorage.setItem(STORAGE_EVENTOS, JSON.stringify(eventos));
+      atualizarTudo();
+    } else {
+      if (isUserAdmin()) {
+        migrarEventosIniciaisParaFirestore();
+      }
+    }
+  }, (err) => {
+    console.warn('Firestore Eventos aviso:', err);
+  });
+  firestoreUnsubs.push(unsubEventos);
+
+  // 3. Sincronizar Configurações
+  const unsubConfig = db.collection('configuracoes').doc('geral').onSnapshot((doc) => {
+    if (doc.exists) {
+      config = { ...DEFAULT_CONFIG, ...doc.data() };
+      localStorage.setItem(STORAGE_CONFIG, JSON.stringify(config));
+      if (typeof preencherConfigForm === 'function') preencherConfigForm();
+    }
+  }, (err) => {
+    console.warn('Firestore Config aviso:', err);
+  });
+  firestoreUnsubs.push(unsubConfig);
+}
+
+async function migrarDadosIniciaisParaFirestore() {
+  if (!isUserAdmin() || !db) return;
+  try {
+    const rawM = localStorage.getItem(STORAGE_MEMBROS);
+    const lista = rawM ? JSON.parse(rawM) : getInitialMembers();
+    for (const m of lista) {
+      await db.collection('membros').doc(m.id).set(m);
+    }
+    console.log('Membros iniciais migrados para o Firestore!');
+  } catch (e) {
+    console.error('Erro ao migrar membros:', e);
+  }
+}
+
+async function migrarEventosIniciaisParaFirestore() {
+  if (!isUserAdmin() || !db) return;
+  try {
+    const rawE = localStorage.getItem(STORAGE_EVENTOS);
+    const lista = rawE ? JSON.parse(rawE) : getInitialEvents();
+    for (const ev of lista) {
+      await db.collection('eventos').doc(ev.id).set(ev);
+    }
+    console.log('Eventos iniciais migrados para o Firestore!');
+  } catch (e) {
+    console.error('Erro ao migrar eventos:', e);
+  }
+}
+
 function carregarDados() {
   try {
         const rawM = localStorage.getItem(STORAGE_MEMBROS);
@@ -288,7 +600,14 @@ function salvarEventos() {
 }
 
 function salvarConfig() {
+  if (!isUserAdmin()) {
+    mostrarToast('Apenas o Administrador pode salvar alterações.', 'warning');
+    return;
+  }
   localStorage.setItem(STORAGE_CONFIG, JSON.stringify(config));
+  if (db) {
+    db.collection('configuracoes').doc('geral').set(config).catch(err => console.error(err));
+  }
   mostrarToast('Configurações salvas com sucesso!', 'success');
 }
 // ================= FUNÇÕES UTILITÁRIAS DE DATAS =================
@@ -855,15 +1174,21 @@ function renderizarTabelaMembros() {
               <i class="ph-fill ph-whatsapp-logo"></i>
             </button>
           ` : ''}
-          <button class="table-action-btn btn-desativar" onclick="desativarMembro('${m.id}')" title="Mover para Inativos">
-            <i class="ph-bold ph-user-minus"></i>
-          </button>
-          <button class="table-action-btn" onclick="abrirModalEditarMembro('${m.id}')" title="Editar">
-            <i class="ph-bold ph-pencil-simple"></i>
-          </button>
-          <button class="table-action-btn btn-trash" onclick="excluirMembro('${m.id}')" title="Excluir">
-            <i class="ph-bold ph-trash"></i>
-          </button>
+          ${isUserAdmin() ? `
+            <button class="table-action-btn btn-desativar" onclick="desativarMembro('${m.id}')" title="Mover para Inativos">
+              <i class="ph-bold ph-user-minus"></i>
+            </button>
+            <button class="table-action-btn" onclick="abrirModalEditarMembro('${m.id}')" title="Editar">
+              <i class="ph-bold ph-pencil-simple"></i>
+            </button>
+            <button class="table-action-btn btn-trash" onclick="excluirMembro('${m.id}')" title="Excluir">
+              <i class="ph-bold ph-trash"></i>
+            </button>
+          ` : `
+            <button class="table-action-btn" onclick="abrirModalEditarMembro('${m.id}')" title="Ver Detalhes">
+              <i class="ph-bold ph-eye"></i>
+            </button>
+          `}
         </td>
       </tr>
     `;
@@ -962,8 +1287,12 @@ function renderizarTabelaEventos() {
         <td>${dataStr} às ${ev.hora || '19:00'}</td>
         <td>${ev.local || 'Templo Central'}</td>
         <td class="text-right">
-          <button class="table-action-btn" onclick="abrirModalEditarEvento('${ev.id}')"><i class="ph-bold ph-pencil-simple"></i></button>
-          <button class="table-action-btn btn-trash" onclick="excluirEvento('${ev.id}')"><i class="ph-bold ph-trash"></i></button>
+          ${isUserAdmin() ? `
+            <button class="table-action-btn" onclick="abrirModalEditarEvento('${ev.id}')" title="Editar"><i class="ph-bold ph-pencil-simple"></i></button>
+            <button class="table-action-btn btn-trash" onclick="excluirEvento('${ev.id}')" title="Excluir"><i class="ph-bold ph-trash"></i></button>
+          ` : `
+            <button class="table-action-btn" onclick="abrirModalEditarEvento('${ev.id}')" title="Ver Detalhes"><i class="ph-bold ph-eye"></i></button>
+          `}
         </td>
       </tr>
     `;
@@ -1160,12 +1489,24 @@ function abrirDetalhesDoDia(ano, mes, dia) {
 
 // ================= MODAL NOVO / EDITAR MEMBRO =================
 function abrirModalNovoMembro() {
-  document.getElementById('formMembro').reset();
+  if (!isUserAdmin()) {
+    mostrarToast('Apenas o Administrador pode cadastrar novos membros.', 'warning');
+    return;
+  }
+  const form = document.getElementById('formMembro');
+  if (form) form.reset();
   document.getElementById('membroId').value = '';
   const selWapp = document.getElementById('membroTemWhatsapp');
   if (selWapp) selWapp.value = 'sim';
+  
+  // Habilita campos e botão salvar
+  const modal = document.getElementById('modalMembro');
+  modal.querySelectorAll('input, select, textarea').forEach(el => el.disabled = false);
+  const btnSalvar = modal.querySelector('button[type="submit"]');
+  if (btnSalvar) btnSalvar.style.display = 'inline-flex';
+
   document.getElementById('modalMembroTitle').textContent = 'Cadastrar Novo Membro';
-  document.getElementById('modalMembro').classList.add('active');
+  modal.classList.add('active');
 }
 
 function abrirModalEditarMembro(id) {
@@ -1181,12 +1522,22 @@ function abrirModalEditarMembro(id) {
   document.getElementById('membroCargo').value = m.observacao || m.cargo || '';
   document.getElementById('membroStatus').value = m.status || 'ativo';
 
-  document.getElementById('modalMembroTitle').textContent = 'Editar Membro';
-  document.getElementById('modalMembro').classList.add('active');
+  const isAdmin = isUserAdmin();
+  const modal = document.getElementById('modalMembro');
+  modal.querySelectorAll('input, select, textarea').forEach(el => el.disabled = !isAdmin);
+  const btnSalvar = modal.querySelector('button[type="submit"]');
+  if (btnSalvar) btnSalvar.style.display = isAdmin ? 'inline-flex' : 'none';
+
+  document.getElementById('modalMembroTitle').textContent = isAdmin ? 'Editar Membro' : 'Detalhes do Membro (Somente Leitura)';
+  modal.classList.add('active');
 }
 
 function salvarFormMembro(e) {
   e.preventDefault();
+  if (!isUserAdmin()) {
+    mostrarToast('Apenas o Administrador pode salvar alterações.', 'warning');
+    return;
+  }
   const id = document.getElementById('membroId').value;
   const nome = document.getElementById('membroNome').value.trim();
   const nascimento = document.getElementById('membroNascimento').value;
@@ -1201,11 +1552,13 @@ function salvarFormMembro(e) {
     return;
   }
 
+  let membroSalvo = null;
   if (id) {
     // Editar
     const idx = membros.findIndex(x => x.id === id);
     if (idx !== -1) {
       membros[idx] = { ...membros[idx], nome, nascimento, categoria, telefone, temWhatsapp, cargo, observacao: cargo, status };
+      membroSalvo = membros[idx];
       mostrarToast('Membro atualizado com sucesso!', 'success');
     }
   } else {
@@ -1222,29 +1575,55 @@ function salvarFormMembro(e) {
       dataCadastro: new Date().toISOString()
     };
     membros.unshift(novo);
+    membroSalvo = novo;
     mostrarToast('Novo membro cadastrado!', 'success');
   }
 
   salvarMembros();
+  if (db && membroSalvo) {
+    db.collection('membros').doc(membroSalvo.id).set(membroSalvo).catch(err => {
+      console.error('Erro ao salvar membro no Firestore:', err);
+    });
+  }
   document.getElementById('modalMembro').classList.remove('active');
 }
 
 function excluirMembro(id) {
+  if (!isUserAdmin()) {
+    mostrarToast('Apenas o Administrador pode excluir cadastros.', 'warning');
+    return;
+  }
   const m = membros.find(x => x.id === id);
   if (!m) return;
   if (confirm(`Tem certeza que deseja excluir o cadastro de "${m.nome}"?`)) {
     membros = membros.filter(x => x.id !== id);
     salvarMembros();
+    if (db) {
+      db.collection('membros').doc(id).delete().catch(err => console.error('Erro ao excluir membro no Firestore:', err));
+    }
     mostrarToast('Membro removido.', 'info');
+    renderizarTabelaMembros();
+    renderizarMembrosInativos();
   }
 }
 
 // ================= MODAL NOVO / EDITAR EVENTO =================
 function abrirModalNovoEvento() {
-  document.getElementById('formEvento').reset();
+  if (!isUserAdmin()) {
+    mostrarToast('Apenas o Administrador pode agendar novos eventos.', 'warning');
+    return;
+  }
+  const form = document.getElementById('formEvento');
+  if (form) form.reset();
   document.getElementById('eventoId').value = '';
+  
+  const modal = document.getElementById('modalEvento');
+  modal.querySelectorAll('input, select, textarea').forEach(el => el.disabled = false);
+  const btnSalvar = modal.querySelector('button[type="submit"]');
+  if (btnSalvar) btnSalvar.style.display = 'inline-flex';
+
   document.getElementById('modalEventoTitle').textContent = 'Agendar Novo Evento';
-  document.getElementById('modalEvento').classList.add('active');
+  modal.classList.add('active');
 }
 
 function abrirModalEditarEvento(id) {
@@ -1257,12 +1636,22 @@ function abrirModalEditarEvento(id) {
   document.getElementById('eventoTipo').value = ev.tipo || 'Culto';
   document.getElementById('eventoLocal').value = ev.local || 'Templo Central';
 
-  document.getElementById('modalEventoTitle').textContent = 'Editar Evento';
-  document.getElementById('modalEvento').classList.add('active');
+  const isAdmin = isUserAdmin();
+  const modal = document.getElementById('modalEvento');
+  modal.querySelectorAll('input, select, textarea').forEach(el => el.disabled = !isAdmin);
+  const btnSalvar = modal.querySelector('button[type="submit"]');
+  if (btnSalvar) btnSalvar.style.display = isAdmin ? 'inline-flex' : 'none';
+
+  document.getElementById('modalEventoTitle').textContent = isAdmin ? 'Editar Evento' : 'Detalhes do Evento (Somente Leitura)';
+  modal.classList.add('active');
 }
 
 function salvarFormEvento(e) {
   e.preventDefault();
+  if (!isUserAdmin()) {
+    mostrarToast('Apenas o Administrador pode salvar eventos.', 'warning');
+    return;
+  }
   const id = document.getElementById('eventoId').value;
   const titulo = document.getElementById('eventoTitulo').value.trim();
   const data = document.getElementById('eventoData').value;
@@ -1275,10 +1664,12 @@ function salvarFormEvento(e) {
     return;
   }
 
+  let eventoSalvo = null;
   if (id) {
     const idx = eventos.findIndex(x => x.id === id);
     if (idx !== -1) {
       eventos[idx] = { ...eventos[idx], titulo, data, hora, tipo, local };
+      eventoSalvo = eventos[idx];
       mostrarToast('Evento atualizado!', 'success');
     }
   } else {
@@ -1291,17 +1682,30 @@ function salvarFormEvento(e) {
       local
     };
     eventos.push(novo);
+    eventoSalvo = novo;
     mostrarToast('Evento agendado!', 'success');
   }
 
   salvarEventos();
+  if (db && eventoSalvo) {
+    db.collection('eventos').doc(eventoSalvo.id).set(eventoSalvo).catch(err => {
+      console.error('Erro ao salvar evento no Firestore:', err);
+    });
+  }
   document.getElementById('modalEvento').classList.remove('active');
 }
 
 function excluirEvento(id) {
+  if (!isUserAdmin()) {
+    mostrarToast('Apenas o Administrador pode remover eventos.', 'warning');
+    return;
+  }
   if (confirm('Deseja remover este evento da agenda?')) {
     eventos = eventos.filter(x => x.id !== id);
     salvarEventos();
+    if (db) {
+      db.collection('eventos').doc(id).delete().catch(err => console.error('Erro ao excluir evento no Firestore:', err));
+    }
     mostrarToast('Evento removido.', 'info');
   }
 }
@@ -1669,7 +2073,7 @@ function atualizarTudo() {
 
 // ================= INICIALIZAÇÃO E EVENTOS =================
 function inicializarAppCompleta() {
-
+  configurarAutenticacao();
   carregarDados();
 
   // Exibe data atual no Topbar
@@ -1961,16 +2365,22 @@ function renderizarMembrosInativos() {
         <td>${m.telefone || '-'}</td>
         <td>${m.observacao || m.cargo || '-'}</td>
         <td class="text-right">
-          <button class="btn-reativar" onclick="reativarMembro('${m.id}')" title="Reativar membro no rol ativo">
-            <i class="ph-bold ph-arrow-counter-clockwise"></i>
-            <span>Reativar</span>
-          </button>
-          <button class="table-action-btn" onclick="abrirModalEditarMembro('${m.id}')" title="Editar dados">
-            <i class="ph-bold ph-pencil-simple"></i>
-          </button>
-          <button class="table-action-btn btn-trash" onclick="excluirMembro('${m.id}')" title="Excluir cadastro">
-            <i class="ph-bold ph-trash"></i>
-          </button>
+          ${isUserAdmin() ? `
+            <button class="btn-reativar" onclick="reativarMembro('${m.id}')" title="Reativar membro no rol ativo">
+              <i class="ph-bold ph-arrow-counter-clockwise"></i>
+              <span>Reativar</span>
+            </button>
+            <button class="table-action-btn" onclick="abrirModalEditarMembro('${m.id}')" title="Editar dados">
+              <i class="ph-bold ph-pencil-simple"></i>
+            </button>
+            <button class="table-action-btn btn-trash" onclick="excluirMembro('${m.id}')" title="Excluir cadastro">
+              <i class="ph-bold ph-trash"></i>
+            </button>
+          ` : `
+            <button class="table-action-btn" onclick="abrirModalEditarMembro('${m.id}')" title="Ver Detalhes">
+              <i class="ph-bold ph-eye"></i>
+            </button>
+          `}
         </td>
       </tr>
     `;
@@ -1978,21 +2388,31 @@ function renderizarMembrosInativos() {
 }
 
 function reativarMembro(id) {
+  if (!isUserAdmin()) {
+    mostrarToast('Apenas o Administrador pode reativar membros.', 'warning');
+    return;
+  }
   const m = membros.find(x => x.id === id);
   if (!m) return;
   m.status = 'ativo';
   salvarMembros();
+  if (db) db.collection('membros').doc(id).update({ status: 'ativo' }).catch(err => console.error(err));
   mostrarToast(`Membro "${m.nome}" foi reativado com sucesso!`, 'success');
   renderizarMembrosInativos();
   renderizarTabelaMembros();
 }
 
 function desativarMembro(id) {
+  if (!isUserAdmin()) {
+    mostrarToast('Apenas o Administrador pode desativar membros.', 'warning');
+    return;
+  }
   const m = membros.find(x => x.id === id);
   if (!m) return;
   if (confirm(`Deseja desativar o membro "${m.nome}"? Ele será movido para Membros Inativos.`)) {
     m.status = 'inativo';
     salvarMembros();
+    if (db) db.collection('membros').doc(id).update({ status: 'inativo' }).catch(err => console.error(err));
     mostrarToast(`Membro "${m.nome}" movido para Inativos.`, 'info');
     renderizarTabelaMembros();
     renderizarMembrosInativos();
