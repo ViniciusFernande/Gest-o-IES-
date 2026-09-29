@@ -402,6 +402,8 @@ function configurarAutenticacao() {
         }
 
         if (loginOverlay) loginOverlay.style.display = 'none';
+        const layoutEl = document.getElementById('appLayout') || document.querySelector('.app-layout');
+        if (layoutEl) layoutEl.style.display = '';
 
         atualizarUiUsuarioLogado();
         iniciarSincronizacaoFirestore();
@@ -411,6 +413,8 @@ function configurarAutenticacao() {
         document.body.classList.remove('role-admin', 'role-viewer');
         document.body.classList.add('not-authenticated');
         if (loginOverlay) loginOverlay.style.display = 'flex';
+        const layoutEl = document.getElementById('appLayout') || document.querySelector('.app-layout');
+        if (layoutEl) layoutEl.style.display = 'none';
         if (pwdInput) pwdInput.value = '';
       }
     });
