@@ -25,7 +25,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
   <!-- Estilos customizados -->
-  <link rel="stylesheet" href="styles.css?v=2.1">
+  <link rel="stylesheet" href="styles.css?v=2.2">
 </head>
 <body class="sidebar-expanded not-authenticated">
 
@@ -50,12 +50,7 @@
           <label for="loginUserInput">Usuário:</label>
           <div class="input-with-icon">
             <i class="ph-bold ph-user input-icon"></i>
-            <input list="loginUserList" type="text" id="loginUserInput" class="form-control login-input" placeholder="Ex: Vinicius, Edna ou IES Piedade" required autocomplete="username">
-            <datalist id="loginUserList">
-              <option value="Vinicius (Administrador)"></option>
-              <option value="Edna (Visualização)"></option>
-              <option value="IES Piedade (Visualização)"></option>
-            </datalist>
+            <input type="text" id="loginUserInput" class="form-control login-input" placeholder="Digite seu usuário..." required autocomplete="off" spellcheck="false">
           </div>
         </div>
 
@@ -1000,6 +995,6 @@
 
   <div class="app-toast-container" id="toastContainer"></div>
 
-  <script src="app.js?v=2.1"></script>
+  <script src="app.js?v=2.2"></script>
 </body>
 </html>

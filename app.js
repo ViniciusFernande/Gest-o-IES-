@@ -322,7 +322,7 @@ function configurarAutenticacao() {
       const email = resolverEmailUsuario(typedUser);
 
       if (!email) {
-        if (errorText) errorText.textContent = 'Usuário não reconhecido. Use Vinicius, Edna ou IES Piedade.';
+        if (errorText) errorText.textContent = 'Usuário ou senha incorretos.';
         if (alertError) alertError.style.display = 'flex';
         return;
       }
