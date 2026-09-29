@@ -1,0 +1,918 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestão de Membros & Aniversariantes | Igreja Evangélica Sementeira Piedade</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="logo.png">
+  
+  <!-- Google Fonts: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Phosphor Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  
+  <!-- Chart.js para o Gráfico de Rosca -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Estilos customizados -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="sidebar-expanded">
+  <!-- Overlay para telas móveis / tablets ao abrir sidebar -->
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <!-- CONTAINER PRINCIPAL -->
+  <div class="app-layout">
+    
+    <!-- ================= BARRA LATERAL (SIDEBAR) ================= -->
+    <aside class="app-sidebar" id="appSidebar">
+      <!-- Cabeçalho da Sidebar -->
+      <div class="sidebar-header">
+        <div class="church-identity">
+          <div class="logo-box">
+            <img src="logo.png" alt="Logo Igreja Sementeira" class="sidebar-logo">
+          </div>
+          <div class="church-text-info">
+            <h1 class="church-name">Igreja Evangélica<br>Sementeira</h1>
+            <span class="church-sub">Piedade • Gestão</span>
+          </div>
+        </div>
+        <button class="btn-toggle-sidebar" id="btnToggleSidebar" title="Suspender/Recolher Menu">
+          <i class="ph-bold ph-caret-double-left" id="toggleIcon"></i>
+        </button>
+      </div>
+
+            <!-- Navegação Principal -->
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">Menu Principal</div>
+        
+        <button class="nav-link active" data-view="home" id="navHome">
+          <span class="nav-icon"><i class="ph-fill ph-squares-four"></i></span>
+          <span class="nav-label">Home</span>
+        </button>
+
+        <button class="nav-link" data-view="membros" id="navMembros">
+          <span class="nav-icon"><i class="ph-fill ph-users"></i></span>
+          <span class="nav-label">Membros</span>
+          <span class="nav-badge" id="sideBadgeTotalMembros">0</span>
+        </button>
+
+        <button class="nav-link" data-view="aniversariantes-dia" id="navNiverDia">
+          <span class="nav-icon"><i class="ph-fill ph-cake"></i></span>
+          <span class="nav-label">Aniversariantes do dia</span>
+          <span class="nav-badge badge-niver-hoje" id="sideBadgeNiverDia">0</span>
+        </button>
+
+        <button class="nav-link" data-view="aniversariantes-mes" id="navNiverMes">
+          <span class="nav-icon"><i class="ph-fill ph-confetti"></i></span>
+          <span class="nav-label">Aniversariantes do mês</span>
+          <span class="nav-badge badge-niver" id="sideBadgeNiverMes">0</span>
+        </button>
+
+        <button class="nav-link" data-view="eventos" id="navEventos">
+          <span class="nav-icon"><i class="ph-fill ph-calendar-star"></i></span>
+          <span class="nav-label">Eventos</span>
+        </button>
+
+        <button class="nav-link" data-view="calendario" id="navCalendario">
+          <span class="nav-icon"><i class="ph-fill ph-calendar"></i></span>
+          <span class="nav-label">Calendário</span>
+        </button>
+
+        <button class="nav-link" data-view="membros-inativos" id="navInativos">
+          <span class="nav-icon"><i class="ph-fill ph-user-minus"></i></span>
+          <span class="nav-label">Membros Inativos</span>
+          <span class="nav-badge badge-inativos" id="sideBadgeInativos">0</span>
+        </button>
+
+        <div class="nav-section-title">Operações</div>
+
+        <button class="nav-link" data-view="relatorios" id="navRelatorios">
+          <span class="nav-icon"><i class="ph-fill ph-printer"></i></span>
+          <span class="nav-label">Imprimir Relatórios</span>
+        </button>
+
+        <button class="nav-link" data-view="configuracoes" id="navConfig">
+          <span class="nav-icon"><i class="ph-fill ph-gear"></i></span>
+          <span class="nav-label">Configurações</span>
+        </button>
+      </nav>
+
+      <!-- Rodapé da Sidebar -->
+      <div class="sidebar-footer">
+        <div class="user-quick-profile">
+          <div class="avatar-status-dot online"></div>
+          <div class="profile-info">
+            <strong>IES Piedade</strong>
+            <small>Painel Administrativo</small>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ================= CONTEÚDO PRINCIPAL (MAIN WRAPPER) ================= -->
+    <div class="main-wrapper">
+      
+      <!-- Topbar Header -->
+      <header class="app-topbar">
+        <div class="topbar-left">
+          <!-- Botão para abrir menu no celular/tablet -->
+          <button class="btn-menu-mobile" id="btnMenuMobile" aria-label="Abrir Menu">
+            <i class="ph-bold ph-list"></i>
+          </button>
+          
+          <div class="page-title-area">
+            <h2 class="page-main-heading" id="topbarPageTitle">Painel Geral</h2>
+            <p class="current-date-tag" id="topbarDateTag">Carregando data...</p>
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <!-- Busca Rápida -->
+          <div class="quick-search-box">
+            <i class="ph-bold ph-magnifying-glass"></i>
+            <input type="text" id="quickSearchInput" placeholder="Buscar membro por nome..." autocomplete="off">
+            <div class="search-results-dropdown" id="searchResultsDropdown"></div>
+          </div>
+
+          <!-- Ação Rápida: Cadastrar Membro -->
+          <button class="btn btn-primary" id="btnTopNovoMembro">
+            <i class="ph-bold ph-user-plus"></i>
+            <span>Novo Membro</span>
+          </button>
+
+          <!-- Ação Rápida: Novo Evento -->
+          <button class="btn btn-secondary" id="btnTopNovoEvento">
+            <i class="ph-bold ph-calendar-plus"></i>
+            <span>Novo Evento</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Conteúdo da Página -->
+      <main class="page-content">
+        <!-- ================= VISÃO: HOME (PAINEL GERAL) ================= -->
+        <section class="view-section active" id="viewHome">
+          
+          <!-- 1. ALERTA DE ANIVERSARIANTES DO DIA (EM CIMA DOS CARDS) -->
+          <div class="birthday-alert-banner" id="birthdayAlertBanner" style="display: none;">
+            <div class="alert-content">
+              <div class="alert-icon-ring">
+                <i class="ph-fill ph-cake"></i>
+              </div>
+              <div class="alert-text">
+                <div class="alert-title-row">
+                  <span class="badge-alert-celebrate">🎉 ANIVERSARIANTE DO DIA!</span>
+                  <span class="alert-count-tag" id="alertBirthdayCountTag">1 celebrando hoje</span>
+                </div>
+                <p class="alert-names-text" id="alertBirthdayNames">
+                  Hoje é dia de festa! Desejamos ricas bênçãos e vida longa.
+                </p>
+              </div>
+            </div>
+            <div class="alert-actions">
+              <button class="btn-close-alert" id="btnCloseBirthdayAlert" title="Ocultar aviso">
+                <i class="ph-bold ph-x"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- 2. CARDS SUPERIORES DE INDICADORES (KPIS) -->
+          <div class="kpi-cards-grid">
+            <!-- Card 1: Total de Membros -->
+            <div class="kpi-card kpi-total clickable-card" data-filter="todos" title="Clique para ver todos os membros">
+              <div class="kpi-icon-box bg-icon-blue">
+                <i class="ph-fill ph-users-three"></i>
+              </div>
+              <div class="kpi-info">
+                <span class="kpi-value" id="kpiTotalMembros">0</span>
+                <span class="kpi-label">Membros cadastrados</span>
+              </div>
+            </div>
+
+            <!-- Card 2: Aniversariantes do Dia -->
+            <div class="kpi-card kpi-hoje clickable-card" data-filter="niverHoje" title="Clique para ver aniversariantes de hoje">
+              <div class="kpi-icon-box bg-icon-purple">
+                <i class="ph-fill ph-cake"></i>
+              </div>
+              <div class="kpi-info">
+                <span class="kpi-value" id="kpiNiverHoje">0</span>
+                <span class="kpi-label">Aniversariantes do dia</span>
+              </div>
+            </div>
+
+            <!-- Card 3: Aniversariantes do Mês -->
+            <div class="kpi-card kpi-mes clickable-card" data-filter="niverMes" title="Clique para ver aniversariantes do mês">
+              <div class="kpi-icon-box bg-icon-amber">
+                <i class="ph-fill ph-confetti"></i>
+              </div>
+              <div class="kpi-info">
+                <span class="kpi-value" id="kpiNiverMes">0</span>
+                <span class="kpi-label">Aniversariantes este mês</span>
+              </div>
+            </div>
+
+            <!-- Card 4: Novos Membros esse Mês -->
+            <div class="kpi-card kpi-novos clickable-card" data-filter="novosMes" title="Clique para ver novos membros">
+              <div class="kpi-icon-box bg-icon-green">
+                <i class="ph-fill ph-user-plus"></i>
+              </div>
+              <div class="kpi-info">
+                <span class="kpi-value" id="kpiNovosMes">0</span>
+                <span class="kpi-label">Novos membros este mês</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. GRADE PRINCIPAL: PRÓXIMOS ANIVERSARIANTES, RESUMO DE MEMBROS E CALENDÁRIO -->
+          <div class="main-dashboard-grid">
+            
+            <!-- Coluna 1: Próximos 5 Aniversariantes -->
+            <div class="dash-card card-upcoming-birthdays">
+              <div class="dash-card-header">
+                <div class="dash-card-title">
+                  <i class="ph-fill ph-cake icon-accent"></i>
+                  <h3>Próximos aniversariantes</h3>
+                </div>
+                <button class="card-header-link" id="linkVerTodosAniversariantes">Ver todos &rarr;</button>
+              </div>
+              
+              <div class="dash-card-body">
+                <div class="birthday-items-list" id="homeUpcomingBirthdaysList">
+                  <!-- Itens gerados dinamicamente via JS -->
+                </div>
+              </div>
+
+              <div class="dash-card-footer">
+                <button class="btn-footer-link" id="btnFooterVerAniversariantes">
+                  <i class="ph-bold ph-calendar-check"></i>
+                  <span>Ver todos os aniversariantes &rarr;</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Coluna 2: Resumo dos Membros com Gráfico de Rosca com centro vazado -->
+            <div class="dash-card card-members-summary">
+              <div class="dash-card-header">
+                <div class="dash-card-title">
+                  <i class="ph-fill ph-users-three icon-accent"></i>
+                  <h3>Resumo dos membros</h3>
+                </div>
+                <span class="card-subtitle-tag" id="summarySubtag">Distribuição Geral</span>
+              </div>
+
+              <div class="dash-card-body summary-body-layout">
+                <!-- Gráfico de Rosca com Centro Vazado -->
+                <div class="donut-chart-container">
+                  <canvas id="membersDonutChart"></canvas>
+                  <div class="donut-center-info">
+                    <span class="center-count" id="donutCenterCount">0</span>
+                    <span class="center-text">Total</span>
+                  </div>
+                </div>
+
+                <!-- Legenda dos Grupos (Homens, Mulheres, Crianças) -->
+                <div class="chart-breakdown-legend" id="chartBreakdownLegend">
+                  <div class="legend-row" data-category="Homem">
+                    <div class="legend-left">
+                      <span class="legend-dot dot-homens"></span>
+                      <span class="legend-name">Homens</span>
+                    </div>
+                    <span class="legend-qty" id="qtyHomens">0</span>
+                  </div>
+
+                  <div class="legend-row" data-category="Mulher">
+                    <div class="legend-left">
+                      <span class="legend-dot dot-mulheres"></span>
+                      <span class="legend-name">Mulheres</span>
+                    </div>
+                    <span class="legend-qty" id="qtyMulheres">0</span>
+                  </div>
+
+                  <div class="legend-row" data-category="Criança">
+                    <div class="legend-left">
+                      <span class="legend-dot dot-criancas"></span>
+                      <span class="legend-name">Crianças</span>
+                    </div>
+                    <span class="legend-qty" id="qtyCriancas">0</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Coluna 3: Calendário do Mês com Navegação -->
+            <div class="dash-card card-mini-calendar">
+              <div class="dash-card-header">
+                <div class="dash-card-title">
+                  <i class="ph-fill ph-calendar icon-accent"></i>
+                  <h3>Calendário</h3>
+                </div>
+                
+                <!-- Controles de Mudar Mês -->
+                <div class="calendar-month-controls">
+                  <button class="btn-cal-nav" id="btnCalPrev" title="Mês Anterior">
+                    <i class="ph-bold ph-caret-left"></i>
+                  </button>
+                  <span class="cal-month-title" id="calCurrentMonthLabel">Mês 2026</span>
+                  <button class="btn-cal-nav" id="btnCalNext" title="Próximo Mês">
+                    <i class="ph-bold ph-caret-right"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div class="dash-card-body cal-card-body">
+                <!-- Dias da Semana -->
+                <div class="cal-weekdays">
+                  <span>Dom</span>
+                  <span>Seg</span>
+                  <span>Ter</span>
+                  <span>Qua</span>
+                  <span>Qui</span>
+                  <span>Sex</span>
+                  <span>Sáb</span>
+                </div>
+
+                <!-- Grade de todos os dias do mês -->
+                <div class="cal-days-grid" id="calDaysGrid">
+                  <!-- Dias renderizados via JS -->
+                </div>
+
+                <!-- Legenda do Calendário -->
+                <div class="cal-event-legend">
+                  <div class="legend-item"><span class="dot-indicator dot-niver"></span> Aniversário</div>
+                  <div class="legend-item"><span class="dot-indicator dot-culto"></span> Culto</div>
+                  <div class="legend-item"><span class="dot-indicator dot-evento"></span> Evento</div>
+                  <div class="legend-item"><span class="dot-indicator dot-reuniao"></span> Reunião</div>
+                  <div class="legend-item"><span class="dot-indicator dot-outro"></span> Outro</div>
+                </div>
+              </div>
+
+              <div class="dash-card-footer">
+                <button class="btn-footer-link" id="btnFooterVerCalendario">
+                  <span>Ver calendário completo &rarr;</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+          <!-- 4. LINHA INFERIOR: CADASTROS RECENTES + PRÓXIMOS EVENTOS + CARD DE FÉ -->
+          <div class="secondary-dashboard-grid">
+            
+            <!-- Tabela dos 5 Cadastros Mais Recentes -->
+            <div class="dash-card card-recent-members">
+              <div class="dash-card-header">
+                <div class="dash-card-title">
+                  <i class="ph-bold ph-user-plus icon-accent"></i>
+                  <h3>Cadastros recentes</h3>
+                </div>
+                <button class="card-header-link" id="linkVerTodosRecentes">Ver todos &rarr;</button>
+              </div>
+
+              <div class="dash-card-body p-0">
+                <div class="recent-members-list" id="homeRecentMembersList">
+                  <!-- Itens gerados dinamicamente via JS -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Tabela / Lista dos Próximos Eventos da Igreja -->
+            <div class="dash-card card-upcoming-events">
+              <div class="dash-card-header">
+                <div class="dash-card-title">
+                  <i class="ph-fill ph-bell-ringing icon-accent"></i>
+                  <h3>Próximos eventos da igreja</h3>
+                </div>
+                <button class="card-header-link" id="linkVerTodosEventos">Ver todos &rarr;</button>
+              </div>
+
+              <div class="dash-card-body p-0">
+                <div class="events-items-list" id="homeUpcomingEventsList">
+                  <!-- Itens gerados dinamicamente via JS -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Card Inspirador da Igreja com Logo -->
+            <div class="dash-card card-faith-banner">
+              <div class="faith-card-content">
+                <div class="faith-sprout-icon">
+                  <img src="logo.png" alt="Sementeira" class="faith-logo-emblem">
+                </div>
+                <h4 class="faith-card-title">Juntos somos mais fortes!</h4>
+                <p class="faith-card-text">
+                  Nossa igreja é formada por pessoas que oram, servem e caminham juntas com Cristo.
+                </p>
+                <button class="btn btn-dark-full" id="btnBannerVerMembros">
+                  <span>Ver todos os membros &rarr;</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+        </section>
+
+        <!-- ================= VISÃO: QUADRO DE MEMBROS ================= -->
+        <section class="view-section" id="viewMembros">
+          <div class="filters-card">
+            <div class="filter-search-input">
+              <i class="ph-bold ph-magnifying-glass"></i>
+              <input type="text" id="filterSearchMembro" placeholder="Pesquisar por nome, cargo ou telefone...">
+            </div>
+
+            <div class="filter-pills-row">
+              <button class="filter-pill active" data-pill-category="todos">Todos (<span id="countPillTodos">0</span>)</button>
+              <button class="filter-pill" data-pill-category="Homem">Homens (<span id="countPillHomens">0</span>)</button>
+              <button class="filter-pill" data-pill-category="Mulher">Mulheres (<span id="countPillMulheres">0</span>)</button>
+              <button class="filter-pill" data-pill-category="Criança">Crianças (<span id="countPillCriancas">0</span>)</button>
+            </div>
+          </div>
+
+          <div class="table-responsive-card">
+            <table class="data-table" id="tabelaMembros">
+              <thead>
+                <tr>
+                  <th>Membro</th>
+                  <th>Categoria / Idade</th>
+                  <th>Data de Nascimento</th>
+                  <th>Telefone / WhatsApp</th>
+                  <th>Observação</th>
+                  <th>Status</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyMembros">
+                <!-- Renderizado dinamicamente via JS -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ================= VISÃO: ANIVERSARIANTES DO DIA ================= -->
+        <section class="view-section" id="viewAniversariantesDia">
+          <div class="table-responsive-card">
+            <div class="card-internal-header" style="background: linear-gradient(135deg, #1f3711 0%, #2b4c16 100%); color: #ffffff; display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <h4 style="color: #ffffff; margin: 0;"><i class="ph-fill ph-cake" style="color: var(--sprout-400);"></i> Celebrando Hoje (<span id="countAniversariantesDia">0</span>)</h4>
+              </div>
+              <button class="btn btn-secondary" style="padding: 6px 14px; font-size: 13px;" onclick="trocarVisualizacao('aniversariantes-mes')">
+                <i class="ph-bold ph-calendar"></i>
+                <span>Ver Todos do Mês</span>
+              </button>
+            </div>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Membro</th>
+                  <th>Categoria</th>
+                  <th>Idade</th>
+                  <th>Telefone / WhatsApp</th>
+                  <th>Observação</th>
+                  <th class="text-right"></th>
+                </tr>
+              </thead>
+              <tbody id="tbodyAniversariantesDia">
+                <!-- Preenchido via JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ================= VISÃO: ANIVERSARIANTES DO MÊS ================= -->
+        <section class="view-section" id="viewAniversariantesMes">
+          <div class="month-selector-wrapper" style="margin-bottom: 20px;">
+            <div class="month-selector-buttons" id="monthSelectorButtons">
+              <!-- Botões dos 12 meses gerados via JS -->
+            </div>
+          </div>
+
+          <div class="table-responsive-card">
+            <div class="card-internal-header">
+              <h4 id="labelAniversariantesMesTitulo">Aniversariantes de Setembro</h4>
+              <button class="btn btn-outline-success" id="btnImprimirBoletimMes" onclick="imprimirListaDoMesSelecionado()">
+                <i class="ph-bold ph-printer"></i>
+                <span>Imprimir Lista do Mês</span>
+              </button>
+            </div>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Dia</th>
+                  <th>Membro</th>
+                  <th>Idade</th>
+                  <th>Telefone / WhatsApp</th>
+                  <th>Categoria</th>
+                  <th class="text-right">Ação</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyAniversariantesMes">
+                <!-- Preenchido via JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ================= VISÃO: EVENTOS ================= -->
+        <section class="view-section" id="viewEventos">
+          <div class="table-responsive-card">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Tipo / Ícone</th>
+                  <th>Título do Evento</th>
+                  <th>Data & Horário</th>
+                  <th>Local / Departamento</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyEventos">
+                <!-- Preenchido via JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ================= VISÃO: CALENDÁRIO ================= -->
+        <section class="view-section" id="viewCalendario">
+          <div class="calendar-view-layout">
+            <!-- Card do Calendário Idêntico ao da Home -->
+            <div class="dash-card card-mini-calendar card-full-calendar">
+              <div class="dash-card-header">
+                <div class="dash-card-title">
+                  <i class="ph-fill ph-calendar icon-accent"></i>
+                  <h3>Calendário</h3>
+                </div>
+                
+                <!-- Controles de Mudar Mês -->
+                <div class="calendar-month-controls">
+                  <button class="btn-cal-nav" id="btnBigCalPrev" title="Mês Anterior">
+                    <i class="ph-bold ph-caret-left"></i>
+                  </button>
+                  <span class="cal-month-title" id="bigCalMonthTitle">Mês 2026</span>
+                  <button class="btn-cal-nav" id="btnBigCalNext" title="Próximo Mês">
+                    <i class="ph-bold ph-caret-right"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div class="dash-card-body cal-card-body">
+                <!-- Dias da Semana -->
+                <div class="cal-weekdays">
+                  <span>Dom</span>
+                  <span>Seg</span>
+                  <span>Ter</span>
+                  <span>Qua</span>
+                  <span>Qui</span>
+                  <span>Sex</span>
+                  <span>Sáb</span>
+                </div>
+
+                <!-- Grade de todos os dias do mês -->
+                <div class="cal-days-grid" id="bigCalDaysGrid">
+                  <!-- Dias renderizados via JS -->
+                </div>
+
+                <!-- Legenda do Calendário -->
+                <div class="cal-event-legend">
+                  <div class="legend-item"><span class="dot-indicator dot-niver"></span> Aniversário</div>
+                  <div class="legend-item"><span class="dot-indicator dot-culto"></span> Culto</div>
+                  <div class="legend-item"><span class="dot-indicator dot-evento"></span> Evento</div>
+                  <div class="legend-item"><span class="dot-indicator dot-reuniao"></span> Reunião</div>
+                  <div class="legend-item"><span class="dot-indicator dot-outro"></span> Outro</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card Lateral: Programação e Aniversários do Mês Selecionado -->
+            <div class="dash-card card-month-agenda">
+              <div class="dash-card-header">
+                <div class="dash-card-title">
+                  <i class="ph-fill ph-list-checks icon-accent"></i>
+                  <h3 id="labelMonthAgendaTitle">Programação do Mês</h3>
+                </div>
+              </div>
+              <div class="dash-card-body" id="monthAgendaContent">
+                <!-- Lista de aniversários e eventos do mês -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= VISÃO: MEMBROS INATIVOS ================= -->
+        <section class="view-section" id="viewMembrosInativos">
+          <div class="table-responsive-card">
+            <div class="card-internal-header">
+              <h4>Relação de Membros Inativos (<span id="countInativosTitulo">0</span>)</h4>
+            </div>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Membro</th>
+                  <th>Categoria</th>
+                  <th>Data de Nascimento</th>
+                  <th>Telefone / WhatsApp</th>
+                  <th>Ação</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyMembrosInativos">
+                <!-- Preenchido via JS -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ================= VISÃO: RELATÓRIOS & IMPRESSÃO ================= -->
+        <section class="view-section" id="viewRelatorios">
+          <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
+            <button class="btn btn-primary" onclick="window.print()">
+              <i class="ph-bold ph-printer"></i>
+              <span>Imprimir Relatório Agora</span>
+            </button>
+          </div>
+
+          <div class="reports-options-grid">
+            <div class="report-box clickable-report active" id="btnReportAniversariantes" onclick="selecionarRelatorio('aniversariantes')">
+              <i class="ph-fill ph-cake"></i>
+              <h4>Boletim de Aniversariantes</h4>
+              <p>Lista formatada de todos os aniversariantes do mês atual.</p>
+            </div>
+            <div class="report-box clickable-report" id="btnReportGeralMembros" onclick="selecionarRelatorio('membros')">
+              <i class="ph-fill ph-users-four"></i>
+              <h4>Relação Geral de Membros</h4>
+              <p>Lista em ordem alfabética com contatos e categorias.</p>
+            </div>
+            <div class="report-box clickable-report" id="btnReportEventos" onclick="selecionarRelatorio('eventos')">
+              <i class="ph-fill ph-calendar-blank"></i>
+              <h4>Agenda de Eventos da Igreja</h4>
+              <p>Programação dos cultos, vigílias e encontros.</p>
+            </div>
+          </div>
+
+          <div class="printable-sheet" id="printSheet">
+            <div class="print-sheet-header">
+              <img src="logo.png" alt="Logo IES" class="print-sheet-logo">
+              <div>
+                <h2>Igreja Evangélica Sementeira - Piedade</h2>
+                <h3 id="printSheetTitle">Relatório de Aniversariantes</h3>
+                <small id="printSheetDate">Emitido em 27/09/2026</small>
+              </div>
+            </div>
+            <div class="print-sheet-content" id="printSheetContent">
+              <!-- Conteúdo a ser impresso -->
+            </div>
+          </div>
+        </section>
+
+
+        <!-- ================= VISÃO: CONFIGURAÇÕES ================= -->
+        <section class="view-section" id="viewConfiguracoes">
+          <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
+            <button class="btn btn-primary" id="btnSalvarConfig">
+              <i class="ph-bold ph-floppy-disk"></i>
+              <span>Salvar Alterações</span>
+            </button>
+          </div>
+
+          <div class="config-grid">
+            <div class="config-card">
+              <h4><i class="ph-fill ph-whatsapp-logo text-whatsapp"></i> Mensagem Padrão de Aniversário</h4>
+              <p class="form-help">Esta mensagem será usada no botão "Enviar mensagem". Use <code>{NOME}</code> para inclusão automática.</p>
+              
+              <div class="form-group mt-3">
+                <label for="txtConfigMsgWhatsapp">Texto da Mensagem:</label>
+                <textarea id="txtConfigMsgWhatsapp" rows="6" class="form-control"></textarea>
+              </div>
+
+              <div class="preview-whatsapp-bubble mt-3">
+                <span class="preview-bubble-label">Pré-visualização:</span>
+                <p id="previewWhatsappText">Carregando prévia...</p>
+              </div>
+            </div>
+
+            <div class="config-card">
+              <h4><i class="ph-fill ph-church"></i> Dados da Igreja</h4>
+              <div class="form-group mt-2">
+                <label>Nome da Igreja:</label>
+                <input type="text" class="form-control" id="cfgNomeIgreja" value="Igreja Evangélica Sementeira Piedade">
+              </div>
+              <div class="form-group mt-2">
+                <label>Cidade / Bairro:</label>
+                <input type="text" class="form-control" id="cfgCidadeIgreja" value="Piedade - SP">
+              </div>
+              <div class="form-group mt-2">
+                <label>Telefone / WhatsApp da Secretaria / Pastor:</label>
+                <input type="text" class="form-control" id="cfgTelAdmin" placeholder="(11) 99999-9999">
+              </div>
+                          <div class="mt-4 pt-3" style="border-top: 1px solid var(--border-light); margin-top: 18px; padding-top: 14px;">
+                <label style="display:block; margin-bottom:8px; font-weight:700; font-size:13px; color:var(--earth-900);">Backup e Segurança dos Dados:</label>
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                  <button class="btn btn-outline" id="btnExportarDados" type="button">
+                    <i class="ph-bold ph-download-simple"></i>
+                    <span>Exportar Backup JSON</span>
+                  </button>
+                  <label class="btn btn-outline btn-file-label" style="cursor:pointer;">
+                    <i class="ph-bold ph-upload-simple"></i>
+                    <span>Restaurar Backup</span>
+                    <input type="file" id="inputFileBackup" accept=".json" style="display:none">
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+
+  <!-- ================= MODAIS ================= -->
+
+  <!-- Modal: Membro -->
+  <div class="app-modal" id="modalMembro">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <i class="ph-bold ph-user-circle"></i>
+          <h3 id="modalMembroTitle">Cadastrar Novo Membro</h3>
+        </div>
+        <button class="btn-modal-close" id="btnCloseModalMembro"><i class="ph-bold ph-x"></i></button>
+      </div>
+      <form id="formMembro">
+        <input type="hidden" id="membroId">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="membroNome">Nome Completo *</label>
+            <input type="text" id="membroNome" class="form-control" placeholder="Ex: Moisés de Oliveira" required>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label for="membroNascimento">Data de Nascimento *</label>
+              <input type="date" id="membroNascimento" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label for="membroCategoria">Categoria *</label>
+              <select id="membroCategoria" class="form-control" required>
+                <option value="Homem">Homem</option>
+                <option value="Mulher">Mulher</option>
+                <option value="Criança">Criança</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label for="membroTelefone">WhatsApp / Telefone</label>
+              <input type="text" id="membroTelefone" class="form-control" placeholder="(11) 99999-9999">
+            </div>
+            <div class="form-group">
+              <label for="membroCargo">Observação</label>
+              <input type="text" id="membroCargo" class="form-control" placeholder="Observações (ex: líder, batismo, ministério...)">
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label for="membroTemWhatsapp">Possui WhatsApp? *</label>
+              <select id="membroTemWhatsapp" class="form-control">
+                <option value="sim">Sim, tem WhatsApp</option>
+                <option value="nao">Não tem WhatsApp</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="membroStatus">Status do Cadastro</label>
+              <select id="membroStatus" class="form-control">
+                <option value="ativo">Ativo</option>
+                <option value="inativo">Inativo</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" id="btnCancelModalMembro">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btnSalvarMembro">Salvar Membro</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+  <!-- Modal: Evento -->
+  <div class="app-modal" id="modalEvento">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <i class="ph-bold ph-calendar-plus"></i>
+          <h3 id="modalEventoTitle">Agendar Novo Evento</h3>
+        </div>
+        <button class="btn-modal-close" id="btnCloseModalEvento"><i class="ph-bold ph-x"></i></button>
+      </div>
+      <form id="formEvento">
+        <input type="hidden" id="eventoId">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="eventoTitulo">Título do Evento *</label>
+            <input type="text" id="eventoTitulo" class="form-control" placeholder="Ex: Reunião de Líderes" required>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label for="eventoData">Data *</label>
+              <input type="date" id="eventoData" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label for="eventoHora">Horário *</label>
+              <input type="time" id="eventoHora" class="form-control" required value="19:00">
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label for="eventoTipo">Tipo de Programação</label>
+              <select id="eventoTipo" class="form-control">
+                <option value="Culto">Culto</option>
+                <option value="Reunião">Reunião</option>
+                <option value="Evento">Evento / Festa</option>
+                <option value="Oração">Campanha de Oração</option>
+                <option value="Outro">Outro</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="eventoLocal">Local / Departamento</label>
+              <input type="text" id="eventoLocal" class="form-control" placeholder="Ex: Templo Central">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" id="btnCancelModalEvento">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar Evento</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+  <!-- Modal: Felicitação WhatsApp -->
+  <div class="app-modal" id="modalWhatsapp">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <i class="ph-fill ph-whatsapp-logo text-whatsapp"></i>
+          <h3>Enviar Felicitação via WhatsApp</h3>
+        </div>
+        <button class="btn-modal-close" id="btnCloseModalWhatsapp"><i class="ph-bold ph-x"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="birthday-recipient-card">
+          <div class="avatar-circle-sm" id="modalWhatsappAvatar">MO</div>
+          <div>
+            <strong id="modalWhatsappNome">Moisés de Oliveira</strong>
+            <small id="modalWhatsappTelefone">(11) 98452-1144</small>
+          </div>
+        </div>
+
+        <div class="form-group mt-3">
+          <label for="txtModalWhatsappMsg">Mensagem personalizada:</label>
+          <textarea id="txtModalWhatsappMsg" rows="5" class="form-control"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" id="btnCancelModalWhatsapp">Cancelar</button>
+        <button type="button" class="btn btn-whatsapp-glow" id="btnConfirmarEnvioWhatsapp">
+          <i class="ph-fill ph-whatsapp-logo"></i>
+          <span>Abrir no WhatsApp e Enviar</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Modal: Detalhes do Dia no Calendário -->
+  <div class="app-modal" id="modalDayDetails">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <i class="ph-fill ph-calendar-check"></i>
+          <h3 id="modalDayDetailsTitle">Programação do Dia</h3>
+        </div>
+        <button class="btn-modal-close" id="btnCloseModalDayDetails"><i class="ph-bold ph-x"></i></button>
+      </div>
+      <div class="modal-body" id="modalDayDetailsBody">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" id="btnFecharDayDetails">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-toast-container" id="toastContainer"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
