@@ -1736,6 +1736,10 @@ function confirmarEnvioWhatsapp() {
 
 // ================= BACKUP & RESTAURAÇÃO =================
 function exportarBackup() {
+  if (!isUserAdmin()) {
+    mostrarToast("Apenas o Administrador pode exportar backups.", "warning");
+    return;
+  }
   const backup = {
     ies_sistema: 'Gestão Igreja Sementeira Piedade',
     versao: '1.0',
@@ -1753,6 +1757,10 @@ function exportarBackup() {
 }
 
 function restaurarBackup(file) {
+  if (!isUserAdmin()) {
+    mostrarToast("Apenas o Administrador pode restaurar backups.", "warning");
+    return;
+  }
   const reader = new FileReader();
   reader.onload = (e) => {
     try {
