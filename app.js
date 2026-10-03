@@ -1,4 +1,4 @@
-/**
+﻿﻿/**
  * IGREJA EVANGÉLICA SEMENTEIRA (IES - PIEDADE)
  * Painel Administrativo de Gestão de Membros, Aniversariantes e Eventos
  */
@@ -89,6 +89,8 @@ let eventos = [];
 let config = { ...DEFAULT_CONFIG };
 let currentView = 'home';
 let donutChartInstance = null;
+let anivChartInstance = null;
+let currentAnivPeriod = 3;
 let currentCalDate = new Date(); // Data do calendário atual
 let selectedAnivMonth = new Date().getMonth(); // 0 a 11
 let currentMemberFilter = 'todos';
@@ -379,6 +381,21 @@ function configurarAutenticacao() {
   if (btnTopbarLogout) btnTopbarLogout.addEventListener('click', realizarLogout);
   if (btnSidebarLogout) btnSidebarLogout.addEventListener('click', realizarLogout);
 
+  // Toggle do menu de perfil
+  const btnToggleProfile = document.getElementById('btnToggleProfileMenu');
+  const profileDropdown = document.getElementById('profileDropdownMenu');
+  if (btnToggleProfile && profileDropdown) {
+    btnToggleProfile.addEventListener('click', (e) => {
+      e.stopPropagation();
+      profileDropdown.classList.toggle('active');
+    });
+    document.addEventListener('click', (e) => {
+      if (!profileDropdown.contains(e.target) && !btnToggleProfile.contains(e.target)) {
+        profileDropdown.classList.remove('active');
+      }
+    });
+  }
+
   // Monitorar Estado de Autenticação do Firebase
   if (auth) {
     auth.onAuthStateChanged((user) => {
@@ -424,33 +441,16 @@ function configurarAutenticacao() {
 function atualizarUiUsuarioLogado() {
   if (!currentUser) return;
   const topName = document.getElementById('topbarUserName');
-  const topRole = document.getElementById('topbarUserRoleBadge');
   const topAvatar = document.getElementById('topbarUserAvatar');
+  const dropdownAvatar = document.getElementById('dropdownUserAvatar');
   const sideName = document.getElementById('sideUserName');
-  const sideRole = document.getElementById('sideUserRole');
 
   if (topName) topName.textContent = currentUser.name;
   if (sideName) sideName.textContent = currentUser.name;
 
-  if (topAvatar) {
-    topAvatar.textContent = currentUser.name.charAt(0).toUpperCase();
-  }
-
-  if (currentUser.role === 'admin') {
-    if (topRole) {
-      topRole.textContent = 'Admin';
-      topRole.className = 'topbar-role-tag badge-admin';
-      topRole.title = 'Acesso total de Administrador';
-    }
-    if (sideRole) sideRole.textContent = 'Administrador Geral';
-  } else {
-    if (topRole) {
-      topRole.textContent = 'Visualização';
-      topRole.className = 'topbar-role-tag badge-viewer';
-      topRole.title = 'Acesso somente leitura';
-    }
-    if (sideRole) sideRole.textContent = 'Modo Visualização';
-  }
+  const inicial = (currentUser.name || 'U').charAt(0).toUpperCase();
+  if (topAvatar) topAvatar.textContent = inicial;
+  if (dropdownAvatar) dropdownAvatar.textContent = inicial;
 }
 
 function iniciarSincronizacaoFirestore() {
@@ -537,29 +537,7 @@ function carregarDados() {
   try {
         const rawM = localStorage.getItem(STORAGE_MEMBROS);
     membros = rawM ? JSON.parse(rawM) : getInitialMembers();
-    if (!membros.some(m => m.status === 'inativo')) {
-      const y = new Date().getFullYear();
-      membros.push({
-        id: 'ies_inativo_1',
-        nome: 'Priscila Mendes Ramos',
-        categoria: 'Mulher',
-        nascimento: `${y - 30}-04-18`,
-        telefone: '(11) 98112-9988',
-        cargo: 'Membro (Afastada)',
-        status: 'inativo',
-        dataCadastro: new Date().toISOString()
-      }, {
-        id: 'ies_inativo_2',
-        nome: 'Roberto Fagundes',
-        categoria: 'Homem',
-        nascimento: `${y - 45}-07-22`,
-        telefone: '(11) 97722-1144',
-        cargo: 'Membro (Transferido)',
-        status: 'inativo',
-        dataCadastro: new Date().toISOString()
-      });
-      localStorage.setItem(STORAGE_MEMBROS, JSON.stringify(membros));
-    }
+
 
     const rawE = localStorage.getItem(STORAGE_EVENTOS);
     eventos = rawE ? JSON.parse(rawE) : getInitialEvents();
@@ -626,9 +604,32 @@ function isAniversarioHoje(dataNasc) {
 
 function isAniversarioMes(dataNasc, mesZeroIndex) {
   if (!dataNasc) return false;
-  const parts = dataNasc.split('-');
-  if (parts.length < 3) return false;
-  return parseInt(parts[1], 10) === (mesZeroIndex + 1);
+  if (typeof dataNasc.toDate === 'function') {
+    return dataNasc.toDate().getMonth() === mesZeroIndex;
+  }
+  if (typeof dataNasc === 'string') {
+    const s = dataNasc.trim();
+    if (s.includes('-')) {
+      const p = s.split('-');
+      if (p.length === 3 && p[0].length === 4) {
+        return parseInt(p[1], 10) === (mesZeroIndex + 1);
+      }
+      if (p.length === 3 && p[2].length === 4) {
+        return parseInt(p[1], 10) === (mesZeroIndex + 1);
+      }
+    }
+    if (s.includes('/')) {
+      const p = s.split('/');
+      if (p.length === 3) {
+        return parseInt(p[1], 10) === (mesZeroIndex + 1);
+      }
+    }
+  }
+  const d = new Date(dataNasc);
+  if (!isNaN(d.getTime())) {
+    return d.getMonth() === mesZeroIndex;
+  }
+  return false;
 }
 
 function isCadastroEsteMes(dataCadastro) {
@@ -683,6 +684,65 @@ const NOMES_MESES = [
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
 ];
 
+const NOMES_DIAS_SEMANA = [
+  'Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'
+];
+const NOMES_DIAS_SEMANA_ABREV = [
+  'Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'
+];
+
+function getDiaSemanaFromDate(dataStr) {
+  if (!dataStr) return 0;
+  const p = dataStr.split('-');
+  if (p.length < 3) return 0;
+  return new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10)).getDay();
+}
+
+function obterProximaOcorrencia(ev, refDate = new Date()) {
+  if (!ev.recorrente) {
+    if (!ev.data) return new Date();
+    const p = ev.data.split('-');
+    const [h, m] = (ev.hora || '19:00').split(':').map(Number);
+    return new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10), h || 0, m || 0);
+  }
+  const diaAlvo = ev.diaSemana !== undefined ? parseInt(ev.diaSemana, 10) : getDiaSemanaFromDate(ev.data);
+  const hojeDia = refDate.getDay();
+  let diff = diaAlvo - hojeDia;
+  const [h, m] = (ev.hora || '19:00').split(':').map(Number);
+  
+  if (diff === 0) {
+    const agoraH = refDate.getHours();
+    const agoraM = refDate.getMinutes();
+    if (agoraH > h || (agoraH === h && agoraM >= m)) {
+      diff = 7;
+    }
+  } else if (diff < 0) {
+    diff += 7;
+  }
+  
+  const d = new Date(refDate.getFullYear(), refDate.getMonth(), refDate.getDate() + diff, h || 0, m || 0);
+  return d;
+}
+
+function sincronizarDiaSemanaComData() {
+  const dataVal = document.getElementById('eventoData')?.value;
+  if (!dataVal) return;
+  const diaSemana = getDiaSemanaFromDate(dataVal);
+  const sel = document.getElementById('eventoDiaSemana');
+  if (sel) sel.value = String(diaSemana);
+}
+
+function toggleOpcoesRecorrencia() {
+  const isChecked = document.getElementById('eventoRecorrente')?.checked;
+  const box = document.getElementById('boxDetalhesRecorrencia');
+  if (box) {
+    box.style.display = isChecked ? 'block' : 'none';
+  }
+  if (isChecked) {
+    sincronizarDiaSemanaComData();
+  }
+}
+
 // ================= CONTROLE DA SIDEBAR E TELAS =================
 function alternarSidebar() {
   const isCollapsed = document.body.classList.contains('sidebar-collapsed');
@@ -704,6 +764,9 @@ function alternarSidebar() {
   }
   if (donutChartInstance) {
     setTimeout(() => donutChartInstance.resize(), 300);
+  }
+  if (anivChartInstance) {
+    setTimeout(() => anivChartInstance.resize(), 300);
   }
 }
 
@@ -785,7 +848,8 @@ function atualizarKpisEAlerta() {
     // 1. Total Membros
   const total = ativos.length;
   document.getElementById('kpiTotalMembros').textContent = total;
-  document.getElementById('sideBadgeTotalMembros').textContent = total;
+  const sideTotal = document.getElementById('sideBadgeTotalMembros');
+  if (sideTotal) sideTotal.textContent = total;
 
   // 2. Aniversariantes do Dia
   const niversHoje = ativos.filter(m => isAniversarioHoje(m.nascimento));
@@ -796,7 +860,8 @@ function atualizarKpisEAlerta() {
   // 3. Aniversariantes do Mês
   const niversMes = ativos.filter(m => isAniversarioMes(m.nascimento, hoje.getMonth()));
   document.getElementById('kpiNiverMes').textContent = niversMes.length;
-  document.getElementById('sideBadgeNiverMes').textContent = niversMes.length;
+  const sideMes = document.getElementById('sideBadgeNiverMes');
+  if (sideMes) sideMes.textContent = niversMes.length;
 
   // 4. Novos Membros este Mês
   const novosMes = ativos.filter(m => isCadastroEsteMes(m.dataCadastro));
@@ -972,7 +1037,22 @@ function renderizarProximosEventos() {
   const listEl = document.getElementById('homeUpcomingEventsList');
   if (!listEl) return;
 
-  const ordenados = [...eventos].sort((a, b) => new Date(a.data) - new Date(b.data)).slice(0, 4);
+  const hoje = new Date();
+  const hojeInicio = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+
+  // Mapeia eventos com suas próximas ocorrências reais
+  const listaOcorrencias = eventos.map(ev => {
+    const proxData = obterProximaOcorrencia(ev, hoje);
+    return {
+      ...ev,
+      proximaData: proxData
+    };
+  }).filter(item => {
+    return item.proximaData >= hojeInicio;
+  });
+
+  listaOcorrencias.sort((a, b) => a.proximaData - b.proximaData);
+  const ordenados = listaOcorrencias.slice(0, 4);
 
   if (ordenados.length === 0) {
     listEl.innerHTML = '<p class="text-muted p-3">Nenhum evento agendado.</p>';
@@ -980,19 +1060,19 @@ function renderizarProximosEventos() {
   }
 
   const iconsMap = {
+    'Culto': { cls: 'event-icon-ceia', icon: 'ph-sparkle' },
+    'Sala de Oração': { cls: 'event-icon-oracao', icon: 'ph-hands-praying' },
     'Reunião': { cls: 'event-icon-reuniao', icon: 'ph-crown' },
     'Evento': { cls: 'event-icon-jovens', icon: 'ph-users' },
     'Oração': { cls: 'event-icon-oracao', icon: 'ph-hands-praying' },
-    'Culto': { cls: 'event-icon-ceia', icon: 'ph-sparkle' },
     'Outro': { cls: 'event-icon-geral', icon: 'ph-calendar-star' }
   };
 
   listEl.innerHTML = ordenados.map(ev => {
     const cfg = iconsMap[ev.tipo] || iconsMap['Outro'];
-    const parts = ev.data.split('-');
-    const dObj = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
-    const diaSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][dObj.getDay()];
-    const diaMes = `${parts[2]}/${parts[1]}`;
+    const dObj = ev.proximaData;
+    const diaSemana = NOMES_DIAS_SEMANA_ABREV[dObj.getDay()];
+    const diaMes = `${String(dObj.getDate()).padStart(2, '0')}/${String(dObj.getMonth() + 1).padStart(2, '0')}`;
 
     return `
       <div class="event-row-item" onclick="abrirModalEditarEvento('${ev.id}')">
@@ -1001,7 +1081,10 @@ function renderizarProximosEventos() {
             <i class="ph-fill ${cfg.icon}"></i>
           </div>
           <div class="event-info-text">
-            <span class="event-title-text">${ev.titulo}</span>
+            <span class="event-title-text">
+              ${ev.titulo}
+              ${ev.recorrente ? '<span class="badge-tag" style="background:#ecfdf5; color:#047857; font-size:10px; padding:1px 6px; margin-left:4px; border:1px solid #a7f3d0;" title="Evento ocorre toda semana"><i class="ph-bold ph-repeat"></i> Semanal</span>' : ''}
+            </span>
             <span class="event-date-text">${diaSemana}, ${diaMes}${ev.hora ? ' às ' + ev.hora : ''}</span>
           </div>
         </div>
@@ -1066,8 +1149,16 @@ function renderizarCalendarioMini() {
       dotsWrap.appendChild(dot);
     }
 
-    // Tem eventos neste dia?
+    // Tem eventos neste dia? (Pontuais ou Fixos Semanais)
+    const dataStrDia = `${ano}-${String(mes+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const diaSemanaCell = new Date(ano, mes, d).getDay();
+
     const evsNoDia = eventos.filter(e => {
+      if (e.recorrente) {
+        const diaAlvo = e.diaSemana !== undefined && e.diaSemana !== null ? parseInt(e.diaSemana, 10) : getDiaSemanaFromDate(e.data);
+        const dInicial = e.data || '2000-01-01';
+        return diaAlvo === diaSemanaCell && dataStrDia >= dInicial;
+      }
       if (!e.data) return false;
       const p = e.data.split('-');
       return parseInt(p[0],10) === ano && parseInt(p[1],10) === (mes + 1) && parseInt(p[2],10) === d;
@@ -1075,7 +1166,7 @@ function renderizarCalendarioMini() {
 
     evsNoDia.forEach(ev => {
       const dot = document.createElement('span');
-      const clsMap = { 'Culto':'culto', 'Reunião':'reuniao', 'Evento':'evento', 'Oração':'outro' };
+      const clsMap = { 'Culto':'culto', 'Sala de Oração':'outro', 'Reunião':'reuniao', 'Evento':'evento', 'Oração':'outro', 'Outro':'outro' };
       dot.className = 'cal-dot ' + (clsMap[ev.tipo] || 'outro');
       dot.title = ev.titulo;
       dotsWrap.appendChild(dot);
@@ -1129,6 +1220,9 @@ function renderizarTabelaMembros() {
   if (elCriancas) elCriancas.textContent = ativos.filter(m => m.categoria === 'Criança').length;
   if (elNiver) elNiver.textContent = ativos.filter(m => isAniversarioMes(m.nascimento, new Date().getMonth())).length;
 
+  // Ordena os membros em ordem alfabética de A a Z
+  filtrados.sort((a, b) => (a.nome || '').trim().localeCompare((b.nome || '').trim(), 'pt-BR', { sensitivity: 'base' }));
+
   if (filtrados.length === 0) {
     tbody.innerHTML = '<tr><td colspan="7" class="text-center p-4 text-muted">Nenhum membro encontrado.</td></tr>';
     if (emptyState) emptyState.style.display = 'block';
@@ -1153,12 +1247,12 @@ function renderizarTabelaMembros() {
             </div>
           </div>
         </td>
-        <td>
+        <td class="text-center">
           <strong>${m.categoria}</strong> 
           ${idade !== '' ? `<small class="text-muted">(${idade} anos)</small>` : ''}
         </td>
-        <td>${niverFormatado}</td>
-        <td>
+        <td class="text-center">${niverFormatado}</td>
+        <td class="text-center">
           ${m.telefone ? `
             <span>${m.telefone}</span>
             ${(m.temWhatsapp !== false && m.temWhatsapp !== 'nao') 
@@ -1166,33 +1260,35 @@ function renderizarTabelaMembros() {
               : '<small class="text-muted" style="display:block; font-size:11px; color:#999;">(Sem WhatsApp)</small>'}
           ` : '<span class="text-muted">Não informado</span>'}
         </td>
-        <td>${m.observacao || m.cargo || '-'}</td>
-        <td>
+        <td class="text-center">${m.observacao || m.cargo || '-'}</td>
+        <td class="text-center">
           <span class="badge-tag ${m.status === 'ativo' ? 'badge-ativo' : 'badge-inativo'}">
             ${m.status === 'ativo' ? 'Ativo' : 'Inativo'}
           </span>
         </td>
-        <td class="text-right">
-          ${(m.telefone && m.temWhatsapp !== false && m.temWhatsapp !== 'nao') ? `
-            <button class="table-action-btn btn-wapp" onclick="prepararMensagemParabens('${m.id}')" title="Enviar WhatsApp">
-              <i class="ph-fill ph-whatsapp-logo"></i>
-            </button>
-          ` : ''}
-          ${isUserAdmin() ? `
-            <button class="table-action-btn btn-desativar" onclick="desativarMembro('${m.id}')" title="Mover para Inativos">
-              <i class="ph-bold ph-user-minus"></i>
-            </button>
-            <button class="table-action-btn" onclick="abrirModalEditarMembro('${m.id}')" title="Editar">
-              <i class="ph-bold ph-pencil-simple"></i>
-            </button>
-            <button class="table-action-btn btn-trash" onclick="excluirMembro('${m.id}')" title="Excluir">
-              <i class="ph-bold ph-trash"></i>
-            </button>
-          ` : `
-            <button class="table-action-btn" onclick="abrirModalEditarMembro('${m.id}')" title="Ver Detalhes">
-              <i class="ph-bold ph-eye"></i>
-            </button>
-          `}
+        <td class="text-center">
+          <div class="table-actions-cell">
+            ${(m.telefone && m.temWhatsapp !== false && m.temWhatsapp !== 'nao') ? `
+              <button class="table-action-btn btn-wapp" onclick="prepararMensagemParabens('${m.id}')" title="Enviar WhatsApp">
+                <i class="ph-fill ph-whatsapp-logo"></i>
+              </button>
+            ` : ''}
+            ${isUserAdmin() ? `
+              <button class="table-action-btn btn-desativar" onclick="desativarMembro('${m.id}')" title="Mover para Inativos">
+                <i class="ph-bold ph-user-minus"></i>
+              </button>
+              <button class="table-action-btn" onclick="abrirModalEditarMembro('${m.id}')" title="Editar">
+                <i class="ph-bold ph-pencil-simple"></i>
+              </button>
+              <button class="table-action-btn btn-trash" onclick="excluirMembro('${m.id}')" title="Excluir">
+                <i class="ph-bold ph-trash"></i>
+              </button>
+            ` : `
+              <button class="table-action-btn" onclick="abrirModalEditarMembro('${m.id}')" title="Ver Detalhes">
+                <i class="ph-bold ph-eye"></i>
+              </button>
+            `}
+          </div>
         </td>
       </tr>
     `;
@@ -1236,25 +1332,27 @@ function renderizarTabelaAniversariantesMes() {
 
     return `
       <tr>
-        <td><strong>Dia ${dia}</strong></td>
+        <td class="text-center"><strong>Dia ${dia}</strong></td>
         <td>
           <span class="member-name-bold">${m.nome}</span>
           ${isHoje ? '<span class="badge-tag badge-niver-day">Hoje 🎂</span>' : ''}
         </td>
-        <td>${idade !== '' ? idade + ' anos' : '-'}</td>
-        <td>${m.telefone || '-'}</td>
-        <td>${m.categoria}</td>
-        <td class="text-right">
-          ${(m.telefone && m.temWhatsapp !== false && m.temWhatsapp !== 'nao') ? `
-            <button class="btn-send-whatsapp-pill" onclick="prepararMensagemParabens('${m.id}')">
-              <i class="ph-fill ph-whatsapp-logo"></i>
-              <span>Parabenizar</span>
-            </button>
-          ` : `
-            <span class="badge-tag" style="background:#f1f3f0; color:#777; padding:4px 8px; font-size:11px;" title="Membro não possui WhatsApp">
-              <i class="ph-bold ph-phone-slash"></i> Sem WhatsApp
-            </span>
-          `}
+        <td class="text-center">${idade !== '' ? idade + ' anos' : '-'}</td>
+        <td class="text-center">${m.telefone || '-'}</td>
+        <td class="text-center">${m.categoria}</td>
+        <td class="text-center">
+          <div class="table-actions-cell">
+            ${(m.telefone && m.temWhatsapp !== false && m.temWhatsapp !== 'nao') ? `
+              <button class="btn-send-whatsapp-pill" onclick="prepararMensagemParabens('${m.id}')">
+                <i class="ph-fill ph-whatsapp-logo"></i>
+                <span>Parabenizar</span>
+              </button>
+            ` : `
+              <span class="badge-tag" style="background:#f1f3f0; color:#777; padding:4px 8px; font-size:11px;" title="Membro não possui WhatsApp">
+                <i class="ph-bold ph-phone-slash"></i> Sem WhatsApp
+              </span>
+            `}
+          </div>
         </td>
       </tr>
     `;
@@ -1279,24 +1377,40 @@ function renderizarTabelaEventos() {
     return;
   }
 
-  const ordenados = [...eventos].sort((a, b) => new Date(a.data) - new Date(b.data));
+  const ordenados = [...eventos].sort((a, b) => {
+    const da = a.data || '9999-12-31';
+    const db = b.data || '9999-12-31';
+    return da.localeCompare(db);
+  });
 
   tbody.innerHTML = ordenados.map(ev => {
-    const p = ev.data.split('-');
-    const dataStr = `${p[2]}/${p[1]}/${p[0]}`;
+    const p = ev.data ? ev.data.split('-') : ['','',''];
+    const dataStr = p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : '-';
+    const diaAlvo = ev.diaSemana !== undefined && ev.diaSemana !== null ? parseInt(ev.diaSemana, 10) : getDiaSemanaFromDate(ev.data);
+    const diaNome = NOMES_DIAS_SEMANA[diaAlvo] || 'Domingo';
+
     return `
       <tr>
         <td><span class="badge-tag">${ev.tipo}</span></td>
-        <td><strong>${ev.titulo}</strong></td>
-        <td>${dataStr} às ${ev.hora || '19:00'}</td>
+        <td>
+          <strong>${ev.titulo}</strong>
+          ${ev.recorrente ? '<span class="badge-tag" style="background:#ecfdf5; color:#047857; margin-left:6px; font-size:10.5px; border:1px solid #a7f3d0;" title="Evento ocorre toda semana"><i class="ph-bold ph-repeat"></i> Toda semana</span>' : ''}
+        </td>
+        <td>
+          ${ev.recorrente 
+            ? `<strong>Todo(a) ${diaNome}</strong> às ${ev.hora || '19:00'}<br><small class="text-muted" style="font-size:11px;">Desde ${dataStr}</small>`
+            : `${dataStr} às ${ev.hora || '19:00'}`}
+        </td>
         <td>${ev.local || 'Templo Central'}</td>
-        <td class="text-right">
-          ${isUserAdmin() ? `
-            <button class="table-action-btn" onclick="abrirModalEditarEvento('${ev.id}')" title="Editar"><i class="ph-bold ph-pencil-simple"></i></button>
-            <button class="table-action-btn btn-trash" onclick="excluirEvento('${ev.id}')" title="Excluir"><i class="ph-bold ph-trash"></i></button>
-          ` : `
-            <button class="table-action-btn" onclick="abrirModalEditarEvento('${ev.id}')" title="Ver Detalhes"><i class="ph-bold ph-eye"></i></button>
-          `}
+        <td class="text-center">
+          <div class="table-actions-cell">
+            ${isUserAdmin() ? `
+              <button class="table-action-btn" onclick="abrirModalEditarEvento('${ev.id}')" title="Editar"><i class="ph-bold ph-pencil-simple"></i></button>
+              <button class="table-action-btn btn-trash" onclick="excluirEvento('${ev.id}')" title="Excluir"><i class="ph-bold ph-trash"></i></button>
+            ` : `
+              <button class="table-action-btn" onclick="abrirModalEditarEvento('${ev.id}')" title="Ver Detalhes"><i class="ph-bold ph-eye"></i></button>
+            `}
+          </div>
         </td>
       </tr>
     `;
@@ -1358,8 +1472,16 @@ function renderizarCalendarioGrande() {
       dotsWrap.appendChild(dot);
     }
 
-    // Tem eventos neste dia?
+    // Tem eventos neste dia? (Pontuais ou Fixos Semanais)
+    const dataStrDia = `${ano}-${String(mes+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const diaSemanaCell = new Date(ano, mes, d).getDay();
+
     const evsNoDia = eventos.filter(e => {
+      if (e.recorrente) {
+        const diaAlvo = e.diaSemana !== undefined && e.diaSemana !== null ? parseInt(e.diaSemana, 10) : getDiaSemanaFromDate(e.data);
+        const dInicial = e.data || '2000-01-01';
+        return diaAlvo === diaSemanaCell && dataStrDia >= dInicial;
+      }
       if (!e.data) return false;
       const p = e.data.split('-');
       return parseInt(p[0],10) === ano && parseInt(p[1],10) === (mes + 1) && parseInt(p[2],10) === d;
@@ -1367,7 +1489,7 @@ function renderizarCalendarioGrande() {
 
     evsNoDia.forEach(ev => {
       const dot = document.createElement('span');
-      const clsMap = { 'Culto':'culto', 'Reunião':'reuniao', 'Evento':'evento', 'Oração':'outro' };
+      const clsMap = { 'Culto':'culto', 'Sala de Oração':'outro', 'Reunião':'reuniao', 'Evento':'evento', 'Oração':'outro', 'Outro':'outro' };
       dot.className = 'cal-dot ' + (clsMap[ev.tipo] || 'outro');
       dot.title = ev.titulo;
       dotsWrap.appendChild(dot);
@@ -1460,7 +1582,15 @@ function abrirDetalhesDoDia(ano, mes, dia) {
     return parseInt(p[1],10) === (mes + 1) && parseInt(p[2],10) === dia;
   });
 
+  const dataStrClick = `${ano}-${String(mes+1).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
+  const diaSemanaClick = new Date(ano, mes, dia).getDay();
+
   const evs = eventos.filter(e => {
+    if (e.recorrente) {
+      const diaAlvo = e.diaSemana !== undefined && e.diaSemana !== null ? parseInt(e.diaSemana, 10) : getDiaSemanaFromDate(e.data);
+      const dInicial = e.data || '2000-01-01';
+      return diaAlvo === diaSemanaClick && dataStrClick >= dInicial;
+    }
     if (!e.data) return false;
     const p = e.data.split('-');
     return parseInt(p[0],10) === ano && parseInt(p[1],10) === (mes + 1) && parseInt(p[2],10) === dia;
@@ -1620,6 +1750,15 @@ function abrirModalNovoEvento() {
   const form = document.getElementById('formEvento');
   if (form) form.reset();
   document.getElementById('eventoId').value = '';
+  document.getElementById('eventoData').value = new Date().toISOString().split('T')[0];
+  document.getElementById('eventoHora').value = '19:00';
+  document.getElementById('eventoTipo').value = 'Culto';
+  
+  const chkRecorrente = document.getElementById('eventoRecorrente');
+  if (chkRecorrente) chkRecorrente.checked = false;
+  const boxRec = document.getElementById('boxDetalhesRecorrencia');
+  if (boxRec) boxRec.style.display = 'none';
+  sincronizarDiaSemanaComData();
   
   const modal = document.getElementById('modalEvento');
   modal.querySelectorAll('input, select, textarea').forEach(el => el.disabled = false);
@@ -1639,6 +1778,21 @@ function abrirModalEditarEvento(id) {
   document.getElementById('eventoHora').value = ev.hora || '19:00';
   document.getElementById('eventoTipo').value = ev.tipo || 'Culto';
   document.getElementById('eventoLocal').value = ev.local || 'Templo Central';
+
+  const isRec = !!ev.recorrente;
+  const chkRecorrente = document.getElementById('eventoRecorrente');
+  if (chkRecorrente) chkRecorrente.checked = isRec;
+  const boxRec = document.getElementById('boxDetalhesRecorrencia');
+  if (boxRec) boxRec.style.display = isRec ? 'block' : 'none';
+
+  const selDia = document.getElementById('eventoDiaSemana');
+  if (selDia) {
+    if (isRec && ev.diaSemana !== undefined && ev.diaSemana !== null) {
+      selDia.value = String(ev.diaSemana);
+    } else {
+      sincronizarDiaSemanaComData();
+    }
+  }
 
   const isAdmin = isUserAdmin();
   const modal = document.getElementById('modalEvento');
@@ -1662,6 +1816,11 @@ function salvarFormEvento(e) {
   const hora = document.getElementById('eventoHora').value;
   const tipo = document.getElementById('eventoTipo').value;
   const local = document.getElementById('eventoLocal').value.trim();
+  const recorrente = document.getElementById('eventoRecorrente')?.checked || false;
+  let diaSemana = parseInt(document.getElementById('eventoDiaSemana')?.value, 10);
+  if (isNaN(diaSemana)) {
+    diaSemana = getDiaSemanaFromDate(data);
+  }
 
   if (!titulo || !data) {
     alert('Preencha o título e a data do evento.');
@@ -1672,9 +1831,18 @@ function salvarFormEvento(e) {
   if (id) {
     const idx = eventos.findIndex(x => x.id === id);
     if (idx !== -1) {
-      eventos[idx] = { ...eventos[idx], titulo, data, hora, tipo, local };
+      eventos[idx] = { 
+        ...eventos[idx], 
+        titulo, 
+        data, 
+        hora, 
+        tipo, 
+        local,
+        recorrente: !!recorrente,
+        diaSemana: recorrente ? diaSemana : null
+      };
       eventoSalvo = eventos[idx];
-      mostrarToast('Evento atualizado!', 'success');
+      mostrarToast(recorrente ? 'Evento fixo semanal atualizado!' : 'Evento atualizado!', 'success');
     }
   } else {
     const novo = {
@@ -1683,11 +1851,13 @@ function salvarFormEvento(e) {
       data,
       hora,
       tipo,
-      local
+      local,
+      recorrente: !!recorrente,
+      diaSemana: recorrente ? diaSemana : null
     };
     eventos.push(novo);
     eventoSalvo = novo;
-    mostrarToast('Evento agendado!', 'success');
+    mostrarToast(recorrente ? 'Evento fixo semanal agendado com sucesso!' : 'Evento agendado!', 'success');
   }
 
   salvarEventos();
@@ -1989,7 +2159,11 @@ function gerarRelatorioEventos() {
         ${ordenados.map(ev => {
           let dataStr = '-';
           let diaSemana = '';
-          if (ev.data) {
+          if (ev.recorrente) {
+            const diaAlvo = ev.diaSemana !== undefined && ev.diaSemana !== null ? parseInt(ev.diaSemana, 10) : getDiaSemanaFromDate(ev.data);
+            dataStr = `Todo(a) ${NOMES_DIAS_SEMANA[diaAlvo] || 'Semana'}`;
+            diaSemana = 'Fixo Semanal';
+          } else if (ev.data) {
             const p = ev.data.split('-');
             if (p.length === 3) {
               dataStr = `${p[2]}/${p[1]}/${p[0]}`;
@@ -2061,6 +2235,7 @@ function mostrarToast(mensagem, tipo = 'success') {
 function atualizarTudo() {
   atualizarKpisEAlerta();
   atualizarGraficoRosca();
+  atualizarGraficoAniversariantes();
   renderizarProximosAniversariantes();
   renderizarCadastrosRecentes();
   renderizarProximosEventos();
@@ -2226,7 +2401,10 @@ function inicializarAppCompleta() {
         dropdown.style.display = 'none';
         return;
       }
-      const matches = membros.filter(m => m.nome.toLowerCase().includes(q)).slice(0, 6);
+      const matches = membros
+        .filter(m => (m.nome || '').toLowerCase().includes(q))
+        .sort((a, b) => (a.nome || '').trim().localeCompare((b.nome || '').trim(), 'pt-BR', { sensitivity: 'base' }))
+        .slice(0, 6);
       if (matches.length === 0) {
         dropdown.innerHTML = '<div style="padding:12px; color:#888;">Nenhum membro encontrado.</div>';
       } else {
@@ -2312,21 +2490,23 @@ function renderizarAniversariantesDia() {
             </div>
           </div>
         </td>
-        <td><strong>${m.categoria}</strong></td>
-        <td><strong style="color:var(--sprout-700); font-size:15px;">${idade !== '' ? idade + ' anos' : '-'}</strong></td>
-        <td>${m.telefone || '<span class="text-muted">Não informado</span>'}</td>
-        <td>${m.observacao || m.cargo || '-'}</td>
-        <td class="text-right">
-          ${(m.telefone && m.temWhatsapp !== false && m.temWhatsapp !== 'nao') ? `
-            <button class="btn btn-whatsapp-glow" onclick="prepararMensagemParabens('${m.id}')" title="Enviar felicitação no WhatsApp">
-              <i class="ph-fill ph-whatsapp-logo"></i>
-              <span>Enviar Parabéns</span>
-            </button>
-          ` : `
-            <span class="badge-tag" style="background:#f1f3f0; color:#777; padding:6px 12px; font-size:12px; border:1px solid #dcdfd8;" title="Membro não possui WhatsApp">
-              <i class="ph-bold ph-phone-slash"></i> Sem WhatsApp
-            </span>
-          `}
+        <td class="text-center"><strong>${m.categoria}</strong></td>
+        <td class="text-center"><strong style="color:var(--sprout-700); font-size:15px;">${idade !== '' ? idade + ' anos' : '-'}</strong></td>
+        <td class="text-center">${m.telefone || '<span class="text-muted">Não informado</span>'}</td>
+        <td class="text-center">${m.observacao || m.cargo || '-'}</td>
+        <td class="text-center">
+          <div class="table-actions-cell">
+            ${(m.telefone && m.temWhatsapp !== false && m.temWhatsapp !== 'nao') ? `
+              <button class="btn btn-whatsapp-glow" onclick="prepararMensagemParabens('${m.id}')" title="Enviar felicitação no WhatsApp">
+                <i class="ph-fill ph-whatsapp-logo"></i>
+                <span>Enviar Parabéns</span>
+              </button>
+            ` : `
+              <span class="badge-tag" style="background:#f1f3f0; color:#777; padding:6px 12px; font-size:12px; border:1px solid #dcdfd8;" title="Membro não possui WhatsApp">
+                <i class="ph-bold ph-phone-slash"></i> Sem WhatsApp
+              </span>
+            `}
+          </div>
         </td>
       </tr>
     `;
@@ -2341,6 +2521,7 @@ function renderizarMembrosInativos() {
   if (!tbody) return;
 
   const inativos = membros.filter(m => m.status === 'inativo');
+  inativos.sort((a, b) => (a.nome || '').trim().localeCompare((b.nome || '').trim(), 'pt-BR', { sensitivity: 'base' }));
   if (countEl) countEl.textContent = inativos.length;
 
   if (inativos.length === 0) {
@@ -2364,27 +2545,29 @@ function renderizarMembrosInativos() {
             </div>
           </div>
         </td>
-        <td><strong>${m.categoria}</strong></td>
-        <td>${dataNasc}</td>
-        <td>${m.telefone || '-'}</td>
-        <td>${m.observacao || m.cargo || '-'}</td>
-        <td class="text-right">
-          ${isUserAdmin() ? `
-            <button class="btn-reativar" onclick="reativarMembro('${m.id}')" title="Reativar membro no rol ativo">
-              <i class="ph-bold ph-arrow-counter-clockwise"></i>
-              <span>Reativar</span>
-            </button>
-            <button class="table-action-btn" onclick="abrirModalEditarMembro('${m.id}')" title="Editar dados">
-              <i class="ph-bold ph-pencil-simple"></i>
-            </button>
-            <button class="table-action-btn btn-trash" onclick="excluirMembro('${m.id}')" title="Excluir cadastro">
-              <i class="ph-bold ph-trash"></i>
-            </button>
-          ` : `
-            <button class="table-action-btn" onclick="abrirModalEditarMembro('${m.id}')" title="Ver Detalhes">
-              <i class="ph-bold ph-eye"></i>
-            </button>
-          `}
+        <td class="text-center"><strong>${m.categoria}</strong></td>
+        <td class="text-center">${dataNasc}</td>
+        <td class="text-center">${m.telefone || '-'}</td>
+        <td class="text-center">${m.observacao || m.cargo || '-'}</td>
+        <td class="text-center">
+          <div class="table-actions-cell">
+            ${isUserAdmin() ? `
+              <button class="btn-reativar" onclick="reativarMembro('${m.id}')" title="Reativar membro no rol ativo">
+                <i class="ph-bold ph-arrow-counter-clockwise"></i>
+                <span>Reativar</span>
+              </button>
+              <button class="table-action-btn" onclick="abrirModalEditarMembro('${m.id}')" title="Editar dados">
+                <i class="ph-bold ph-pencil-simple"></i>
+              </button>
+              <button class="table-action-btn btn-trash" onclick="excluirMembro('${m.id}')" title="Excluir cadastro">
+                <i class="ph-bold ph-trash"></i>
+              </button>
+            ` : `
+              <button class="table-action-btn" onclick="abrirModalEditarMembro('${m.id}')" title="Ver Detalhes">
+                <i class="ph-bold ph-eye"></i>
+              </button>
+            `}
+          </div>
         </td>
       </tr>
     `;
@@ -2420,5 +2603,194 @@ function desativarMembro(id) {
     mostrarToast(`Membro "${m.nome}" movido para Inativos.`, 'info');
     renderizarTabelaMembros();
     renderizarMembrosInativos();
+  }
+}
+
+
+// ================= GRÁFICO DE ANIVERSARIANTES (HISTÓRICO DE MESES) =================
+function mudarPeriodoGraficoAniversariantes(qtdMeses) {
+  currentAnivPeriod = qtdMeses;
+  atualizarGraficoAniversariantes();
+}
+
+function alternarPeriodoGraficoAniversariantes() {
+  if (currentAnivPeriod === 3) {
+    currentAnivPeriod = 6;
+  } else if (currentAnivPeriod === 6) {
+    currentAnivPeriod = 12;
+  } else {
+    currentAnivPeriod = 3;
+  }
+  atualizarGraficoAniversariantes();
+}
+
+function calcularAniversariantesPorMes(qtdMeses = 3) {
+  const meses = [];
+  const hoje = new Date();
+  const y = hoje.getFullYear();
+  const m = hoje.getMonth(); // 0 a 11
+
+  for (let i = qtdMeses - 1; i >= 0; i--) {
+    let mesIdx = m - i;
+    let ano = y;
+    while (mesIdx < 0) {
+      mesIdx += 12;
+      ano -= 1;
+    }
+    const nomeMes = NOMES_MESES[mesIdx];
+    const curto = nomeMes.substring(0, 3);
+    meses.push({
+      ano: ano,
+      mes: mesIdx,
+      label: qtdMeses > 6 ? `${curto}/${String(ano).slice(-2)}` : curto,
+      labelCompleto: nomeMes,
+      isMesAtual: mesIdx === m && ano === y,
+      total: 0
+    });
+  }
+
+  // Considera ativos todos os membros que não estejam explicitamente com status inativo
+  const ativos = membros.filter(m => (m.status || 'ativo').toLowerCase() !== 'inativo');
+
+  meses.forEach(item => {
+    item.total = ativos.filter(m => isAniversarioMes(m.nascimento, item.mes)).length;
+  });
+
+  return meses;
+}
+
+function atualizarGraficoAniversariantes() {
+  const ctx = document.getElementById('aniversariantesChart');
+  if (!ctx) return;
+
+  // Garante que a biblioteca Chart.js já terminou de carregar
+  if (typeof Chart === 'undefined') {
+    setTimeout(atualizarGraficoAniversariantes, 150);
+    return;
+  }
+
+  // Atualiza pílulas ativas
+  document.querySelectorAll('.growth-pill-selector .btn-pill-period').forEach(btn => {
+    const p = parseInt(btn.getAttribute('data-period'), 10);
+    btn.classList.toggle('active', p === currentAnivPeriod);
+  });
+
+  // Atualiza títulos e botões
+  const titulo = document.getElementById('tituloGraficoAniversariantes');
+  if (titulo) {
+    titulo.textContent = `Aniversariantes (${currentAnivPeriod} meses)`;
+  }
+
+  const labelBtn = document.getElementById('labelPeriodoBotaoAniv');
+  if (labelBtn) {
+    if (currentAnivPeriod === 3) {
+      labelBtn.textContent = 'Ver 6 meses';
+    } else if (currentAnivPeriod === 6) {
+      labelBtn.textContent = 'Ver 12 meses';
+    } else {
+      labelBtn.textContent = 'Ver 3 meses';
+    }
+  }
+
+  const labelFooter = document.getElementById('labelFooterPeriodoAniv');
+  if (labelFooter) {
+    if (currentAnivPeriod === 3) {
+      labelFooter.textContent = 'Ver 6 meses anteriores →';
+    } else if (currentAnivPeriod === 6) {
+      labelFooter.textContent = 'Ver 12 meses anteriores →';
+    } else {
+      labelFooter.textContent = 'Voltar para 3 meses →';
+    }
+  }
+
+  const mesesData = calcularAniversariantesPorMes(currentAnivPeriod);
+  const totalPeriodo = mesesData.reduce((acc, item) => acc + item.total, 0);
+
+  const elTotal = document.getElementById('totalAnivPeriodo');
+  if (elTotal) elTotal.textContent = totalPeriodo;
+
+  const elBadge = document.getElementById('badgeAnivPeriodo');
+  if (elBadge) {
+    elBadge.textContent = totalPeriodo === 1 ? 'aniversariante' : 'aniversariantes';
+  }
+
+  const labels = mesesData.map(m => m.label);
+  const dataValues = mesesData.map(m => m.total);
+
+  // Paleta de cores com realce no mês atual
+  const bgColors = mesesData.map(m => m.isMesAtual ? '#ea580c' : '#fb923c');
+  const hoverColors = mesesData.map(m => m.isMesAtual ? '#c2410c' : '#f97316');
+
+  const maxVal = Math.max(...dataValues, 0);
+  const suggestedMax = maxVal < 4 ? 4 : maxVal + 1;
+
+  if (anivChartInstance) {
+    anivChartInstance.data.labels = labels;
+    anivChartInstance.data.datasets[0].data = dataValues;
+    anivChartInstance.data.datasets[0].backgroundColor = bgColors;
+    anivChartInstance.data.datasets[0].hoverBackgroundColor = hoverColors;
+    anivChartInstance.data.datasets[0].maxBarThickness = currentAnivPeriod > 6 ? 24 : 40;
+    anivChartInstance.options.scales.y.suggestedMax = suggestedMax;
+    anivChartInstance.update();
+  } else {
+    anivChartInstance = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Aniversariantes',
+          data: dataValues,
+          backgroundColor: bgColors,
+          hoverBackgroundColor: hoverColors,
+          borderRadius: 6,
+          borderSkipped: false,
+          maxBarThickness: currentAnivPeriod > 6 ? 24 : 40
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#1c1d1a',
+            titleColor: '#ffffff',
+            bodyColor: '#ffffff',
+            padding: 8,
+            cornerRadius: 6,
+            callbacks: {
+              title: function(items) {
+                const idx = items[0].dataIndex;
+                return `${mesesData[idx].labelCompleto} de ${mesesData[idx].ano}`;
+              },
+              label: function(item) {
+                const val = item.raw;
+                return `${val} ${val === 1 ? 'aniversariante' : 'aniversariantes'}`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: {
+              color: '#78796f',
+              font: { size: 11, family: 'Inter, sans-serif', weight: '600' }
+            }
+          },
+          y: {
+            beginAtZero: true,
+            suggestedMax: suggestedMax,
+            grid: { color: 'rgba(0, 0, 0, 0.05)' },
+            ticks: {
+              stepSize: 1,
+              precision: 0,
+              color: '#78796f',
+              font: { size: 10, family: 'Inter, sans-serif' }
+            }
+          }
+        }
+      }
+    });
   }
 }

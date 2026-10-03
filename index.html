@@ -25,7 +25,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
   <!-- Estilos customizados -->
-  <link rel="stylesheet" href="styles.css?v=2.2">
+  <link rel="stylesheet" href="styles.css?v=3.4">
 </head>
 <body class="sidebar-expanded not-authenticated">
 
@@ -40,10 +40,7 @@
         <span class="login-sub">Piedade • Sistema de Gestão</span>
       </div>
 
-      <div class="login-security-tag">
-        <i class="ph-bold ph-shield-check"></i>
-        <span>Acesso Restrito & Protegido</span>
-      </div>
+
 
       <form id="loginForm" class="login-form">
         <div class="form-group">
@@ -120,19 +117,16 @@
         <button class="nav-link" data-view="membros" id="navMembros">
           <span class="nav-icon"><i class="ph-fill ph-users"></i></span>
           <span class="nav-label">Membros</span>
-          <span class="nav-badge" id="sideBadgeTotalMembros">0</span>
         </button>
 
         <button class="nav-link" data-view="aniversariantes-dia" id="navNiverDia">
           <span class="nav-icon"><i class="ph-fill ph-cake"></i></span>
           <span class="nav-label">Aniversariantes do dia</span>
-          <span class="nav-badge badge-niver-hoje" id="sideBadgeNiverDia">0</span>
         </button>
 
         <button class="nav-link" data-view="aniversariantes-mes" id="navNiverMes">
           <span class="nav-icon"><i class="ph-fill ph-confetti"></i></span>
           <span class="nav-label">Aniversariantes do mês</span>
-          <span class="nav-badge badge-niver" id="sideBadgeNiverMes">0</span>
         </button>
 
         <button class="nav-link" data-view="eventos" id="navEventos">
@@ -148,7 +142,6 @@
         <button class="nav-link" data-view="membros-inativos" id="navInativos">
           <span class="nav-icon"><i class="ph-fill ph-user-minus"></i></span>
           <span class="nav-label">Membros Inativos</span>
-          <span class="nav-badge badge-inativos" id="sideBadgeInativos">0</span>
         </button>
 
         <div class="nav-section-title">Operações</div>
@@ -164,19 +157,7 @@
         </button>
       </nav>
 
-      <!-- Rodapé da Sidebar -->
-      <div class="sidebar-footer">
-        <div class="user-quick-profile">
-          <div class="avatar-status-dot online"></div>
-          <div class="profile-info">
-            <strong id="sideUserName">IES Piedade</strong>
-            <small id="sideUserRole">Painel Administrativo</small>
-          </div>
-          <button class="btn-logout" id="btnSidebarLogout" title="Sair da Conta">
-            <i class="ph-bold ph-sign-out"></i>
-          </button>
-        </div>
-      </div>
+
     </aside>
 
     <!-- ================= CONTEÚDO PRINCIPAL (MAIN WRAPPER) ================= -->
@@ -216,19 +197,27 @@
             <span>Novo Evento</span>
           </button>
 
-          <!-- Perfil do Usuário Conectado -->
-          <div class="topbar-user-badge" id="topbarUserBadge">
-            <div class="topbar-user-info">
-              <div class="user-avatar-tag" id="topbarUserAvatar">V</div>
-              <div class="user-text-tag">
-                <span class="topbar-user-name" id="topbarUserName">Vinicius</span>
-                <span class="topbar-role-tag badge-admin" id="topbarUserRoleBadge">Admin</span>
-              </div>
-            </div>
-            <button class="btn-topbar-logout" id="btnTopbarLogout" title="Sair do Sistema">
-              <i class="ph-bold ph-sign-out"></i>
-              <span>Sair</span>
+          <!-- Perfil do Usuário Conectado (Avatar Redondo com Dropdown) -->
+          <div class="user-profile-dropdown" id="userProfileDropdown">
+            <button type="button" class="user-avatar-btn" id="btnToggleProfileMenu" title="Menu de usuário" aria-label="Menu de usuário">
+              <span class="user-avatar-tag" id="topbarUserAvatar">V</span>
             </button>
+
+            <!-- Dropdown que abre ao clicar no avatar -->
+            <div class="profile-dropdown-menu" id="profileDropdownMenu">
+              <div class="profile-dropdown-header">
+                <div class="profile-dropdown-avatar" id="dropdownUserAvatar">V</div>
+                <div class="profile-dropdown-info">
+                  <span class="profile-dropdown-name" id="topbarUserName">Vinicius</span>
+                  <span class="profile-dropdown-sub">Conectado</span>
+                </div>
+              </div>
+              <div class="profile-dropdown-divider"></div>
+              <button type="button" class="btn-dropdown-logout" id="btnTopbarLogout" title="Sair do Sistema">
+                <i class="ph-bold ph-sign-out"></i>
+                <span>Sair</span>
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -326,13 +315,6 @@
                   <!-- Itens gerados dinamicamente via JS -->
                 </div>
               </div>
-
-              <div class="dash-card-footer">
-                <button class="btn-footer-link" id="btnFooterVerAniversariantes">
-                  <i class="ph-bold ph-calendar-check"></i>
-                  <span>Ver todos os aniversariantes &rarr;</span>
-                </button>
-              </div>
             </div>
 
             <!-- Coluna 2: Resumo dos Membros com Gráfico de Rosca com centro vazado -->
@@ -423,18 +405,12 @@
 
                 <!-- Legenda do Calendário -->
                 <div class="cal-event-legend">
-                  <div class="legend-item"><span class="dot-indicator dot-niver"></span> Aniversário</div>
+                  <div class="legend-item"><span class="dot-indicator dot-niver"></span> Aniversariante</div>
                   <div class="legend-item"><span class="dot-indicator dot-culto"></span> Culto</div>
-                  <div class="legend-item"><span class="dot-indicator dot-evento"></span> Evento</div>
+                  <div class="legend-item"><span class="dot-indicator dot-outro"></span> Sala de Oração</div>
                   <div class="legend-item"><span class="dot-indicator dot-reuniao"></span> Reunião</div>
-                  <div class="legend-item"><span class="dot-indicator dot-outro"></span> Outro</div>
+                  <div class="legend-item"><span class="dot-indicator dot-evento"></span> Evento</div>
                 </div>
-              </div>
-
-              <div class="dash-card-footer">
-                <button class="btn-footer-link" id="btnFooterVerCalendario">
-                  <span>Ver calendário completo &rarr;</span>
-                </button>
               </div>
             </div>
 
@@ -476,19 +452,38 @@
               </div>
             </div>
 
-            <!-- Card Inspirador da Igreja com Logo -->
-            <div class="dash-card card-faith-banner">
-              <div class="faith-card-content">
-                <div class="faith-sprout-icon">
-                  <img src="logo.png" alt="Sementeira" class="faith-logo-emblem">
+            <!-- Gráfico de Aniversariantes nos Últimos Meses -->
+            <div class="dash-card card-growth-chart">
+              <div class="dash-card-header">
+                <div class="dash-card-title">
+                  <i class="ph-fill ph-cake icon-accent" style="color: #ea580c;"></i>
+                  <h3 id="tituloGraficoAniversariantes">Aniversariantes (3 meses)</h3>
                 </div>
-                <h4 class="faith-card-title">Juntos somos mais fortes!</h4>
-                <p class="faith-card-text">
-                  Nossa igreja é formada por pessoas que oram, servem e caminham juntas com Cristo.
-                </p>
-                <button class="btn btn-dark-full" id="btnBannerVerMembros">
-                  <span>Ver todos os membros &rarr;</span>
+                <button type="button" class="btn-toggle-meses" id="btnAlternarMesesAniv" onclick="alternarPeriodoGraficoAniversariantes()" title="Clique para alternar períodos de meses">
+                  <i class="ph-bold ph-arrows-clockwise"></i>
+                  <span id="labelPeriodoBotaoAniv">Ver 6 meses</span>
                 </button>
+              </div>
+
+              <div class="dash-card-body growth-chart-card-body">
+                <div class="growth-meta-bar">
+                  <div>
+                    <span class="growth-meta-label">Total no período</span>
+                    <div class="growth-meta-value-row">
+                      <span class="growth-meta-number" id="totalAnivPeriodo">0</span>
+                      <span class="growth-meta-badge" id="badgeAnivPeriodo" style="background:#fff7ed; color:#c2410c; border:1px solid #fed7aa;">aniversariantes</span>
+                    </div>
+                  </div>
+                  <div class="growth-pill-selector">
+                    <button type="button" class="btn-pill-period active" data-period="3" onclick="mudarPeriodoGraficoAniversariantes(3)" title="Visualizar últimos 3 meses">3 Meses</button>
+                    <button type="button" class="btn-pill-period" data-period="6" onclick="mudarPeriodoGraficoAniversariantes(6)" title="Visualizar últimos 6 meses">6 Meses</button>
+                    <button type="button" class="btn-pill-period" data-period="12" onclick="mudarPeriodoGraficoAniversariantes(12)" title="Visualizar últimos 12 meses">12 Meses</button>
+                  </div>
+                </div>
+
+                <div class="growth-chart-canvas-wrapper">
+                  <canvas id="aniversariantesChart"></canvas>
+                </div>
               </div>
             </div>
 
@@ -518,12 +513,12 @@
               <thead>
                 <tr>
                   <th>Membro</th>
-                  <th>Categoria / Idade</th>
-                  <th>Data de Nascimento</th>
-                  <th>Telefone / WhatsApp</th>
-                  <th>Observação</th>
-                  <th>Status</th>
-                  <th>Ações</th>
+                  <th class="text-center">Categoria / Idade</th>
+                  <th class="text-center">Data de Nascimento</th>
+                  <th class="text-center">Telefone / WhatsApp</th>
+                  <th class="text-center">Observação</th>
+                  <th class="text-center">Status</th>
+                  <th class="text-center">Ações</th>
                 </tr>
               </thead>
               <tbody id="tbodyMembros">
@@ -549,11 +544,11 @@
               <thead>
                 <tr>
                   <th>Membro</th>
-                  <th>Categoria</th>
-                  <th>Idade</th>
-                  <th>Telefone / WhatsApp</th>
-                  <th>Observação</th>
-                  <th class="text-right"></th>
+                  <th class="text-center">Categoria</th>
+                  <th class="text-center">Idade</th>
+                  <th class="text-center">Telefone / WhatsApp</th>
+                  <th class="text-center">Observação</th>
+                  <th class="text-center">Ações</th>
                 </tr>
               </thead>
               <tbody id="tbodyAniversariantesDia">
@@ -582,12 +577,12 @@
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>Dia</th>
+                  <th class="text-center">Dia</th>
                   <th>Membro</th>
-                  <th>Idade</th>
-                  <th>Telefone / WhatsApp</th>
-                  <th>Categoria</th>
-                  <th class="text-right">Ação</th>
+                  <th class="text-center">Idade</th>
+                  <th class="text-center">Telefone / WhatsApp</th>
+                  <th class="text-center">Categoria</th>
+                  <th class="text-center">Ações</th>
                 </tr>
               </thead>
               <tbody id="tbodyAniversariantesMes">
@@ -660,11 +655,11 @@
 
                 <!-- Legenda do Calendário -->
                 <div class="cal-event-legend">
-                  <div class="legend-item"><span class="dot-indicator dot-niver"></span> Aniversário</div>
+                  <div class="legend-item"><span class="dot-indicator dot-niver"></span> Aniversariante</div>
                   <div class="legend-item"><span class="dot-indicator dot-culto"></span> Culto</div>
-                  <div class="legend-item"><span class="dot-indicator dot-evento"></span> Evento</div>
+                  <div class="legend-item"><span class="dot-indicator dot-outro"></span> Sala de Oração</div>
                   <div class="legend-item"><span class="dot-indicator dot-reuniao"></span> Reunião</div>
-                  <div class="legend-item"><span class="dot-indicator dot-outro"></span> Outro</div>
+                  <div class="legend-item"><span class="dot-indicator dot-evento"></span> Evento</div>
                 </div>
               </div>
             </div>
@@ -694,10 +689,11 @@
               <thead>
                 <tr>
                   <th>Membro</th>
-                  <th>Categoria</th>
-                  <th>Data de Nascimento</th>
-                  <th>Telefone / WhatsApp</th>
-                  <th>Ação</th>
+                  <th class="text-center">Categoria</th>
+                  <th class="text-center">Data de Nascimento</th>
+                  <th class="text-center">Telefone / WhatsApp</th>
+                  <th class="text-center">Observação</th>
+                  <th class="text-center">Ações</th>
                 </tr>
               </thead>
               <tbody id="tbodyMembrosInativos">
@@ -906,7 +902,7 @@
           <div class="form-row-2">
             <div class="form-group">
               <label for="eventoData">Data *</label>
-              <input type="date" id="eventoData" class="form-control" required>
+              <input type="date" id="eventoData" class="form-control" required onchange="sincronizarDiaSemanaComData()">
             </div>
             <div class="form-group">
               <label for="eventoHora">Horário *</label>
@@ -919,15 +915,49 @@
               <label for="eventoTipo">Tipo de Programação</label>
               <select id="eventoTipo" class="form-control">
                 <option value="Culto">Culto</option>
+                <option value="Sala de Oração">Sala de Oração</option>
                 <option value="Reunião">Reunião</option>
                 <option value="Evento">Evento / Festa</option>
                 <option value="Oração">Campanha de Oração</option>
-                <option value="Outro">Outro</option>
               </select>
             </div>
             <div class="form-group">
               <label for="eventoLocal">Local / Departamento</label>
               <input type="text" id="eventoLocal" class="form-control" placeholder="Ex: Templo Central">
+            </div>
+          </div>
+
+          <!-- Opção de Repetição Semanal (Evento Fixo) -->
+          <div class="form-group recurrence-toggle-card">
+            <label class="recurrence-custom-switch" for="eventoRecorrente">
+              <input type="checkbox" id="eventoRecorrente" onchange="toggleOpcoesRecorrencia()">
+              <span class="recurrence-slider"></span>
+              <div class="recurrence-label-text">
+                <div class="recurrence-label-header">
+                  <i class="ph-bold ph-repeat"></i>
+                  <strong>Evento Fixo Semanal</strong>
+                </div>
+                <small>Repetir toda semana no mesmo dia e horário (ex: Culto todo domingo)</small>
+              </div>
+            </label>
+
+            <div id="boxDetalhesRecorrencia" class="recurrence-details-box" style="display: none;">
+              <div class="form-group mb-0">
+                <label for="eventoDiaSemana">Dia da Semana Fixo *</label>
+                <select id="eventoDiaSemana" class="form-control">
+                  <option value="0">Todo Domingo</option>
+                  <option value="1">Toda Segunda-feira</option>
+                  <option value="2">Toda Terça-feira</option>
+                  <option value="3">Toda Quarta-feira</option>
+                  <option value="4">Toda Quinta-feira</option>
+                  <option value="5">Toda Sexta-feira</option>
+                  <option value="6">Todo Sábado</option>
+                </select>
+                <div class="recurrence-hint" id="textoResumoRecorrencia">
+                  <i class="ph-fill ph-check-circle"></i>
+                  <span>Ocorrência automática toda semana no calendário e na agenda da igreja.</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -995,6 +1025,6 @@
 
   <div class="app-toast-container" id="toastContainer"></div>
 
-  <script src="app.js?v=2.2"></script>
+  <script src="app.js?v=3.5"></script>
 </body>
 </html>
