@@ -98,191 +98,11 @@ let membroParaParabens = null;
 
 // ================= DADOS DE EXEMPLO REAIS E INICIAIS =================
 function getInitialMembers() {
-  const hoje = new Date();
-  const y = hoje.getFullYear();
-  const m = String(hoje.getMonth() + 1).padStart(2, '0');
-  const d = String(hoje.getDate()).padStart(2, '0');
-
-  // Gera datas relativas para os cadastros recentes
-  const dHoje = new Date(y, hoje.getMonth(), hoje.getDate()).toISOString();
-  const d25 = new Date(y, hoje.getMonth(), Math.max(1, hoje.getDate() - 2)).toISOString();
-  const d23 = new Date(y, hoje.getMonth(), Math.max(1, hoje.getDate() - 4)).toISOString();
-  const dAnt1 = new Date(y, hoje.getMonth() - 1, 10).toISOString();
-  const dAnt2 = new Date(y, hoje.getMonth() - 2, 15).toISOString();
-
-  return [
-    {
-      id: 'ies_1',
-      nome: 'Moisés de Oliveira',
-      categoria: 'Homem',
-      nascimento: `${y - 38}-${m}-${d}`, // Aniversariante de HOJE!
-      telefone: '(11) 98452-1144',
-      cargo: 'Líder de Louvor',
-      status: 'ativo',
-      dataCadastro: dHoje
-    },
-    {
-      id: 'ies_2',
-      nome: 'Pr. Carlos Eduardo Ramos',
-      categoria: 'Homem',
-      nascimento: `${y - 52}-11-20`,
-      telefone: '(11) 99876-4321',
-      cargo: 'Pastor Titular',
-      status: 'ativo',
-      dataCadastro: dAnt1
-    },
-    {
-      id: 'ies_3',
-      nome: 'Mateus Henrique Silva',
-      categoria: 'Criança',
-      nascimento: `${y - 10}-12-18`,
-      telefone: '(11) 97765-4433',
-      cargo: 'Coral Infantil',
-      status: 'ativo',
-      dataCadastro: d23
-    },
-    {
-      id: 'ies_4',
-      nome: 'Sarah Cristina Santos',
-      categoria: 'Mulher',
-      nascimento: `${y - 32}-05-15`,
-      telefone: '(11) 97123-5588',
-      cargo: 'Professora EBD',
-      status: 'ativo',
-      dataCadastro: d25
-    },
-    {
-      id: 'ies_5',
-      nome: 'Gabriel Souza',
-      categoria: 'Homem',
-      nascimento: `${y - 24}-09-28`,
-      telefone: '(11) 98833-2211',
-      cargo: 'Membro',
-      status: 'ativo',
-      dataCadastro: dHoje
-    },
-    {
-      id: 'ies_6',
-      nome: 'Lucas Oliveira',
-      categoria: 'Homem',
-      nascimento: `${y - 29}-09-30`,
-      telefone: '(11) 96544-3322',
-      cargo: 'Membro',
-      status: 'ativo',
-      dataCadastro: d25
-    },
-    {
-      id: 'ies_7',
-      nome: 'Mariana Santos',
-      categoria: 'Mulher',
-      nascimento: `${y - 27}-10-05`,
-      telefone: '(11) 97411-8899',
-      cargo: 'Membro',
-      status: 'ativo',
-      dataCadastro: d23
-    },
-    {
-      id: 'ies_8',
-      nome: 'Davi Lucca Ribeiro',
-      categoria: 'Criança',
-      nascimento: `${y - 7}-10-12`,
-      telefone: '(11) 98452-1144',
-      cargo: 'Departamento Infantil',
-      status: 'ativo',
-      dataCadastro: dHoje
-    },
-    {
-      id: 'ies_9',
-      nome: 'Ester Ferreira Lima',
-      categoria: 'Mulher',
-      nascimento: `${y - 28}-08-04`,
-      telefone: '(11) 96541-2398',
-      cargo: 'Diaconisa',
-      status: 'ativo',
-      dataCadastro: dAnt2
-    },
-    {
-      id: 'ies_10',
-      nome: 'Pr. Antônio Carlos',
-      categoria: 'Homem',
-      nascimento: `${y - 68}-09-15`,
-      telefone: '(11) 97711-2233',
-      cargo: 'Pastor Emérito',
-      status: 'ativo',
-      dataCadastro: dAnt2
-    },
-    {
-      id: 'ies_11',
-      nome: 'Rebeca Andrade',
-      categoria: 'Mulher',
-      nascimento: `${y - 21}-10-19`,
-      telefone: '(11) 98122-3344',
-      cargo: 'Líder dos Jovens',
-      status: 'ativo',
-      dataCadastro: d25
-    },
-    {
-      id: 'ies_inativo_1',
-      nome: 'Priscila Mendes Ramos',
-      categoria: 'Mulher',
-      nascimento: `${y - 30}-04-18`,
-      telefone: '(11) 98112-9988',
-      cargo: 'Membro (Afastada)',
-      status: 'inativo',
-      dataCadastro: dAnt2
-    },
-    {
-      id: 'ies_inativo_2',
-      nome: 'Roberto Fagundes',
-      categoria: 'Homem',
-      nascimento: `${y - 45}-07-22`,
-      telefone: '(11) 97722-1144',
-      cargo: 'Membro (Transferido)',
-      status: 'inativo',
-      dataCadastro: dAnt2
-    }
-  ];
+  return [];
 }
 
 function getInitialEvents() {
-  const hoje = new Date();
-  const y = hoje.getFullYear();
-  const m = hoje.getMonth();
-
-  return [
-    {
-      id: 'ev_1',
-      titulo: 'Reunião de líderes',
-      tipo: 'Reunião',
-      data: new Date(y, m, hoje.getDate() + 1).toISOString().split('T')[0],
-      hora: '18:00',
-      local: 'Sala Ministerial'
-    },
-    {
-      id: 'ev_2',
-      titulo: 'Encontro de jovens',
-      tipo: 'Evento',
-      data: new Date(y, m, hoje.getDate() + 7).toISOString().split('T')[0],
-      hora: '19:30',
-      local: 'Templo Central'
-    },
-    {
-      id: 'ev_3',
-      titulo: 'Campanha de oração',
-      tipo: 'Oração',
-      data: new Date(y, m, hoje.getDate() + 10).toISOString().split('T')[0],
-      hora: '06:00',
-      local: 'Templo Central'
-    },
-    {
-      id: 'ev_4',
-      titulo: 'Ceia do Senhor',
-      tipo: 'Culto',
-      data: new Date(y, m, hoje.getDate() + 14).toISOString().split('T')[0],
-      hora: '18:30',
-      local: 'Templo Central'
-    }
-  ];
+  return [];
 }
 
 // Carregar & Salvar Dados
@@ -462,15 +282,9 @@ function iniciarSincronizacaoFirestore() {
 
   // 1. Sincronizar Membros
   const unsubMembros = db.collection('membros').onSnapshot((snapshot) => {
-    if (!snapshot.empty) {
-      membros = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      localStorage.setItem(STORAGE_MEMBROS, JSON.stringify(membros));
-      atualizarTudo();
-    } else {
-      if (isUserAdmin()) {
-        migrarDadosIniciaisParaFirestore();
-      }
-    }
+    membros = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    localStorage.setItem(STORAGE_MEMBROS, JSON.stringify(membros));
+    atualizarTudo();
   }, (err) => {
     console.warn('Firestore Membros aviso:', err);
   });
@@ -478,15 +292,9 @@ function iniciarSincronizacaoFirestore() {
 
   // 2. Sincronizar Eventos
   const unsubEventos = db.collection('eventos').onSnapshot((snapshot) => {
-    if (!snapshot.empty) {
-      eventos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      localStorage.setItem(STORAGE_EVENTOS, JSON.stringify(eventos));
-      atualizarTudo();
-    } else {
-      if (isUserAdmin()) {
-        migrarEventosIniciaisParaFirestore();
-      }
-    }
+    eventos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    localStorage.setItem(STORAGE_EVENTOS, JSON.stringify(eventos));
+    atualizarTudo();
   }, (err) => {
     console.warn('Firestore Eventos aviso:', err);
   });
@@ -2792,5 +2600,54 @@ function atualizarGraficoAniversariantes() {
         }
       }
     });
+  }
+}
+// ================= ZERAR BANCO DE DADOS (LIMPEZA TOTAL) =================
+async function zerarBancoDeDados() {
+  if (!isUserAdmin()) {
+    mostrarToast('Apenas o Administrador pode zerar o banco de dados.', 'warning');
+    return;
+  }
+
+  const confirmou = confirm('ATENÇÃO: Deseja realmente ZERAR todo o banco de dados?\n\nIsso apagará permanentemente todos os membros e eventos cadastrados (tanto deste aparelho quanto do Firebase online na nuvem) para você começar do zero.\n\nClique em OK para confirmar a limpeza total.');
+  if (!confirmou) return;
+
+  mostrarToast('Zerando banco de dados na nuvem e local...', 'info');
+
+  try {
+    if (db) {
+      // Deleta todos os membros no Firestore
+      const snapM = await db.collection('membros').get();
+      if (!snapM.empty) {
+        const batchM = db.batch();
+        snapM.docs.forEach(doc => batchM.delete(doc.ref));
+        await batchM.commit();
+      }
+
+      // Deleta todos os eventos no Firestore
+      const snapE = await db.collection('eventos').get();
+      if (!snapE.empty) {
+        const batchE = db.batch();
+        snapE.docs.forEach(doc => batchE.delete(doc.ref));
+        await batchE.commit();
+      }
+    }
+
+    // Limpa localmente
+    membros = [];
+    eventos = [];
+    localStorage.setItem(STORAGE_MEMBROS, JSON.stringify([]));
+    localStorage.setItem(STORAGE_EVENTOS, JSON.stringify([]));
+    atualizarTudo();
+
+    mostrarToast('Banco de dados zerado com sucesso! Nenhum dado fictício reaparecerá.', 'success');
+  } catch (err) {
+    console.error('Erro ao limpar nuvem:', err);
+    membros = [];
+    eventos = [];
+    localStorage.setItem(STORAGE_MEMBROS, JSON.stringify([]));
+    localStorage.setItem(STORAGE_EVENTOS, JSON.stringify([]));
+    atualizarTudo();
+    mostrarToast('Dados locais zerados. Verifique a conexão com a nuvem.', 'info');
   }
 }
