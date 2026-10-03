@@ -25,7 +25,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
   <!-- Estilos customizados -->
-  <link rel="stylesheet" href="styles.css?v=4.1">
+  <link rel="stylesheet" href="styles.css?v=4.4">
 </head>
 <body class="sidebar-expanded not-authenticated">
 
@@ -151,7 +151,7 @@
           <span class="nav-label">Imprimir Relatórios</span>
         </button>
 
-        <button class="nav-link" data-view="configuracoes" id="navConfig">
+        <button class="nav-link admin-only" data-view="configuracoes" id="navConfig">
           <span class="nav-icon"><i class="ph-fill ph-gear"></i></span>
           <span class="nav-label">Configurações</span>
         </button>
@@ -497,7 +497,7 @@
           <div class="filters-card">
             <div class="filter-search-input">
               <i class="ph-bold ph-magnifying-glass"></i>
-              <input type="text" id="filterSearchMembro" placeholder="Pesquisar por nome, cargo ou telefone...">
+              <input type="text" id="filterSearchMembro" placeholder="Pesquisar por nome, cargo ou telefone..." autocomplete="off" spellcheck="false">
             </div>
 
             <div class="filter-pills-row">
@@ -747,7 +747,7 @@
 
 
         <!-- ================= VISÃO: CONFIGURAÇÕES ================= -->
-        <section class="view-section" id="viewConfiguracoes">
+        <section class="view-section admin-only" id="viewConfiguracoes">
           <div class="viewer-readonly-notice"><i class="ph-bold ph-shield-check"></i><span><strong>Modo de Leitura:</strong> Acesso somente para consulta. Criação, edição e exclusão são restritas ao Administrador.</span></div>
           <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
             <button class="btn btn-primary admin-only" id="btnSalvarConfig">
@@ -784,7 +784,7 @@
               </div>
               <div class="form-group mt-2">
                 <label>Telefone / WhatsApp da Secretaria / Pastor:</label>
-                <input type="text" class="form-control" id="cfgTelAdmin" placeholder="(11) 99999-9999">
+                <input type="text" class="form-control" id="cfgTelAdmin" placeholder="15 99769-6207" maxlength="13" autocomplete="off" spellcheck="false">
               </div>
                           <!-- Área Administrativa: Backup e Zerar Banco (Oculta para Visualizadores) -->
               <div class="admin-only">
@@ -838,12 +838,12 @@
         </div>
         <button class="btn-modal-close" id="btnCloseModalMembro"><i class="ph-bold ph-x"></i></button>
       </div>
-      <form id="formMembro">
+      <form id="formMembro" autocomplete="off">
         <input type="hidden" id="membroId">
         <div class="modal-body">
           <div class="form-group">
             <label for="membroNome">Nome Completo *</label>
-            <input type="text" id="membroNome" class="form-control" placeholder="Ex: Moisés de Oliveira" required>
+            <input type="text" id="membroNome" class="form-control" placeholder="Ex: Moisés de Oliveira" required autocomplete="off" spellcheck="false" data-lpignore="true">
           </div>
 
           <div class="form-row-2">
@@ -864,11 +864,11 @@
           <div class="form-row-2">
             <div class="form-group">
               <label for="membroTelefone">WhatsApp / Telefone</label>
-              <input type="text" id="membroTelefone" class="form-control" placeholder="(11) 99999-9999">
+              <input type="text" id="membroTelefone" class="form-control" placeholder="15 99769-6207" maxlength="13" autocomplete="off" spellcheck="false">
             </div>
             <div class="form-group">
               <label for="membroCargo">Observação</label>
-              <input type="text" id="membroCargo" class="form-control" placeholder="Observações (ex: líder, batismo, ministério...)">
+              <input type="text" id="membroCargo" class="form-control" placeholder="Observações (ex: líder, batismo, ministério...)" autocomplete="off" spellcheck="false">
             </div>
           </div>
 
@@ -908,12 +908,12 @@
         </div>
         <button class="btn-modal-close" id="btnCloseModalEvento"><i class="ph-bold ph-x"></i></button>
       </div>
-      <form id="formEvento">
+      <form id="formEvento" autocomplete="off">
         <input type="hidden" id="eventoId">
         <div class="modal-body">
           <div class="form-group">
             <label for="eventoTitulo">Título do Evento *</label>
-            <input type="text" id="eventoTitulo" class="form-control" placeholder="Ex: Reunião de Líderes" required>
+            <input type="text" id="eventoTitulo" class="form-control" placeholder="Ex: Reunião de Líderes" required autocomplete="off" spellcheck="false" data-lpignore="true">
           </div>
 
           <div class="form-row-2">
@@ -940,7 +940,7 @@
             </div>
             <div class="form-group">
               <label for="eventoLocal">Local / Departamento</label>
-              <input type="text" id="eventoLocal" class="form-control" placeholder="Ex: Templo Central">
+              <input type="text" id="eventoLocal" class="form-control" placeholder="Ex: Templo Central" autocomplete="off" spellcheck="false">
             </div>
           </div>
 
@@ -1042,6 +1042,6 @@
 
   <div class="app-toast-container" id="toastContainer"></div>
 
-  <script src="app.js?v=4.1"></script>
+  <script src="app.js?v=4.4"></script>
 </body>
 </html>

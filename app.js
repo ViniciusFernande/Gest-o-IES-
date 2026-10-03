@@ -271,6 +271,11 @@ function atualizarUiUsuarioLogado() {
   const inicial = (currentUser.name || 'U').charAt(0).toUpperCase();
   if (topAvatar) topAvatar.textContent = inicial;
   if (dropdownAvatar) dropdownAvatar.textContent = inicial;
+
+  // Se não for admin e estiver em configurações, redireciona para o Painel Geral
+  if (!isUserAdmin() && currentView === 'configuracoes') {
+    trocarVisualizacao('home');
+  }
 }
 
 function iniciarSincronizacaoFirestore() {
@@ -339,6 +344,40 @@ async function migrarEventosIniciaisParaFirestore() {
   } catch (e) {
     console.error('Erro ao migrar eventos:', e);
   }
+}
+
+
+// ================= MÁSCARA E FORMATAÇÃO DE TELEFONE (PADRÃO: 15 99769-6207) =================
+function formatarTelefone(valor) {
+  if (!valor) return '';
+  let d = String(valor).replace(/\D/g, '');
+  if ((d.length === 12 || d.length === 13) && d.startsWith('55')) {
+    d = d.slice(2);
+  }
+  if ((d.length === 11 || d.length === 12) && d.startsWith('0')) {
+    d = d.slice(1);
+  }
+  d = d.slice(0, 11);
+
+  if (d.length <= 2) {
+    return d;
+  } else if (d.length <= 6) {
+    return `${d.slice(0, 2)} ${d.slice(2)}`;
+  } else if (d.length <= 10) {
+    return `${d.slice(0, 2)} ${d.slice(2, 6)}-${d.slice(6)}`;
+  } else {
+    return `${d.slice(0, 2)} ${d.slice(2, 7)}-${d.slice(7)}`;
+  }
+}
+
+function aplicarMascaraTelefone(input) {
+  if (!input) return;
+  input.addEventListener('input', function() {
+    input.value = formatarTelefone(input.value);
+  });
+  input.addEventListener('blur', function() {
+    input.value = formatarTelefone(input.value);
+  });
 }
 
 function carregarDados() {
@@ -587,6 +626,10 @@ function alternarMenuMobile(abrir) {
 }
 
 function trocarVisualizacao(viewName) {
+  if (viewName === 'configuracoes' && !isUserAdmin()) {
+    mostrarToast('Acesso restrito ao perfil de Administrador.', 'warning');
+    viewName = 'home';
+  }
   currentView = viewName;
   document.querySelectorAll('.view-section').forEach(sec => sec.classList.remove('active'));
   document.querySelectorAll('.nav-link').forEach(btn => btn.classList.remove('active'));
@@ -1062,7 +1105,7 @@ function renderizarTabelaMembros() {
         <td class="text-center">${niverFormatado}</td>
         <td class="text-center">
           ${m.telefone ? `
-            <span>${m.telefone}</span>
+            <span>${formatarTelefone(m.telefone)}</span>
             ${(m.temWhatsapp !== false && m.temWhatsapp !== 'nao') 
               ? '<i class="ph-fill ph-whatsapp-logo" style="color:var(--whatsapp); margin-left:4px; font-size:14px;" title="Possui WhatsApp"></i>' 
               : '<small class="text-muted" style="display:block; font-size:11px; color:#999;">(Sem WhatsApp)</small>'}
@@ -1146,7 +1189,7 @@ function renderizarTabelaAniversariantesMes() {
           ${isHoje ? '<span class="badge-tag badge-niver-day">Hoje 🎂</span>' : ''}
         </td>
         <td class="text-center">${idade !== '' ? idade + ' anos' : '-'}</td>
-        <td class="text-center">${m.telefone || '-'}</td>
+        <td class="text-center">${formatarTelefone(m.telefone) || '-'}</td>
         <td class="text-center">${m.categoria}</td>
         <td class="text-center">
           <div class="table-actions-cell">
@@ -1458,7 +1501,7 @@ function abrirModalEditarMembro(id) {
   document.getElementById('membroNome').value = m.nome;
   document.getElementById('membroNascimento').value = m.nascimento;
   document.getElementById('membroCategoria').value = m.categoria;
-  document.getElementById('membroTelefone').value = m.telefone || '';
+  document.getElementById('membroTelefone').value = formatarTelefone(m.telefone || '');
   const selWapp = document.getElementById('membroTemWhatsapp');
   if (selWapp) selWapp.value = (m.temWhatsapp !== false && m.temWhatsapp !== 'nao') ? 'sim' : 'nao';
   document.getElementById('membroCargo').value = m.observacao || m.cargo || '';
@@ -1484,7 +1527,7 @@ function salvarFormMembro(e) {
   const nome = document.getElementById('membroNome').value.trim();
   const nascimento = document.getElementById('membroNascimento').value;
   const categoria = document.getElementById('membroCategoria').value;
-  const telefone = document.getElementById('membroTelefone').value.trim();
+  const telefone = formatarTelefone(document.getElementById('membroTelefone').value.trim());
   const temWhatsapp = document.getElementById('membroTemWhatsapp') ? (document.getElementById('membroTemWhatsapp').value === 'sim') : true;
   const cargo = document.getElementById('membroCargo').value.trim();
   const status = document.getElementById('membroStatus').value;
@@ -1706,7 +1749,7 @@ function prepararMensagemParabens(membroId) {
 function abrirModalParabens(membro) {
   membroParaParabens = membro;
   document.getElementById('modalWhatsappNome').textContent = membro.nome;
-  document.getElementById('modalWhatsappTelefone').textContent = membro.telefone || 'Sem telefone cadastrado';
+  document.getElementById('modalWhatsappTelefone').textContent = formatarTelefone(membro.telefone) || 'Sem telefone cadastrado';
   document.getElementById('modalWhatsappAvatar').textContent = getIniciais(membro.nome);
 
   // Prepara texto personalizado
@@ -2202,6 +2245,10 @@ function inicializarAppCompleta() {
   });
 
   // Backup
+    // Máscaras de Telefone no Padrão: 15 99769-6207
+  aplicarMascaraTelefone(document.getElementById('membroTelefone'));
+  aplicarMascaraTelefone(document.getElementById('cfgTelAdmin'));
+
   document.getElementById('btnExportarDados')?.addEventListener('click', exportarBackup);
   document.getElementById('inputFileBackup')?.addEventListener('change', (e) => {
     if (e.target.files && e.target.files[0]) restaurarBackup(e.target.files[0]);
@@ -2308,7 +2355,7 @@ function renderizarAniversariantesDia() {
         </td>
         <td class="text-center"><strong>${m.categoria}</strong></td>
         <td class="text-center"><strong style="color:var(--sprout-700); font-size:15px;">${idade !== '' ? idade + ' anos' : '-'}</strong></td>
-        <td class="text-center">${m.telefone || '<span class="text-muted">Não informado</span>'}</td>
+        <td class="text-center">${m.telefone ? formatarTelefone(m.telefone) : '<span class="text-muted">Não informado</span>'}</td>
         <td class="text-center">${m.observacao || m.cargo || '-'}</td>
         <td class="text-center">
           <div class="table-actions-cell">
@@ -2363,7 +2410,7 @@ function renderizarMembrosInativos() {
         </td>
         <td class="text-center"><strong>${m.categoria}</strong></td>
         <td class="text-center">${dataNasc}</td>
-        <td class="text-center">${m.telefone || '-'}</td>
+        <td class="text-center">${formatarTelefone(m.telefone) || '-'}</td>
         <td class="text-center">${m.observacao || m.cargo || '-'}</td>
         <td class="text-center">
           <div class="table-actions-cell">
