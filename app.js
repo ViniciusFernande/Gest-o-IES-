@@ -391,11 +391,12 @@ function carregarDados() {
 
     const rawC = localStorage.getItem(STORAGE_CONFIG);
     if (rawC) config = { ...DEFAULT_CONFIG, ...JSON.parse(rawC) };
-    // Normaliza categorias para apenas Homem, Mulher, Criança
+    // Normaliza categorias para apenas Homem ou Mulher
     let mudou = false;
     membros.forEach(m => {
       if (m.categoria === 'Idoso') { m.categoria = 'Homem'; mudou = true; }
       if (m.categoria === 'Jovem') { m.categoria = 'Mulher'; mudou = true; }
+      if (m.categoria === 'Criança' || m.categoria === 'Crianca') { m.categoria = 'Homem'; mudou = true; }
     });
     if (mudou) {
       localStorage.setItem(STORAGE_MEMBROS, JSON.stringify(membros));
@@ -750,22 +751,22 @@ function atualizarGraficoRosca() {
   const ativos = membros.filter(m => m.status === 'ativo');
   const homens = ativos.filter(m => m.categoria === 'Homem').length;
   const mulheres = ativos.filter(m => m.categoria === 'Mulher').length;
-  const criancas = ativos.filter(m => m.categoria === 'Criança').length;
+  // apenas Homem e Mulher
   const total = ativos.length;
 
   document.getElementById('donutCenterCount').textContent = total;
   document.getElementById('qtyHomens').textContent = homens;
   document.getElementById('qtyMulheres').textContent = mulheres;
-  document.getElementById('qtyCriancas').textContent = criancas;
+  const elQtyCriancas = document.getElementById('qtyCriancas'); if (elQtyCriancas) elQtyCriancas.textContent = '0';
 
   const ctx = document.getElementById('membersDonutChart');
   if (!ctx) return;
 
-  const dataValues = [homens, mulheres, criancas];
-  const bgColors = ['#2563eb', '#ec4899', '#16a34a'];
+  const dataValues = [homens, mulheres];
+  const bgColors = ['#2563eb', '#ec4899'];
 
   if (donutChartInstance) {
-    donutChartInstance.data.labels = ['Homens', 'Mulheres', 'Crianças'];
+    donutChartInstance.data.labels = ['Homens', 'Mulheres'];
     donutChartInstance.data.datasets[0].data = dataValues;
     donutChartInstance.data.datasets[0].backgroundColor = bgColors;
     donutChartInstance.update();
@@ -773,7 +774,7 @@ function atualizarGraficoRosca() {
     donutChartInstance = new Chart(ctx, {
       type: 'doughnut',
       data: {
-        labels: ['Homens', 'Mulheres', 'Crianças'],
+        labels: ['Homens', 'Mulheres'],
         datasets: [{
           data: dataValues,
           backgroundColor: bgColors,
@@ -1042,7 +1043,7 @@ function renderizarTabelaMembros() {
     // Filtro de Categoria/Pill
     if (currentMemberFilter === 'Homem' && m.categoria !== 'Homem') return false;
     if (currentMemberFilter === 'Mulher' && m.categoria !== 'Mulher') return false;
-    if (currentMemberFilter === 'Criança' && m.categoria !== 'Criança') return false;
+    // categoria Criança removida
     if (currentMemberFilter === 'aniversariantes-mes' && !isAniversarioMes(m.nascimento, new Date().getMonth())) return false;
     if (currentMemberFilter === 'niverHoje' && !isAniversarioHoje(m.nascimento)) return false;
     if (currentMemberFilter === 'novosMes' && !isCadastroEsteMes(m.dataCadastro)) return false;
@@ -1062,13 +1063,13 @@ function renderizarTabelaMembros() {
   const elTodos = document.getElementById('countPillTodos') || document.getElementById('pillCountTodos');
   const elHomens = document.getElementById('countPillHomens') || document.getElementById('pillCountHomens');
   const elMulheres = document.getElementById('countPillMulheres') || document.getElementById('pillCountMulheres');
-  const elCriancas = document.getElementById('countPillCriancas') || document.getElementById('pillCountCriancas');
+  const elCriancas = document.getElementById('countPillCriancas');
   const elNiver = document.getElementById('countPillNiverMes') || document.getElementById('pillCountNiverMes');
 
   if (elTodos) elTodos.textContent = membros.length;
   if (elHomens) elHomens.textContent = ativos.filter(m => m.categoria === 'Homem').length;
   if (elMulheres) elMulheres.textContent = ativos.filter(m => m.categoria === 'Mulher').length;
-  if (elCriancas) elCriancas.textContent = ativos.filter(m => m.categoria === 'Criança').length;
+  if (elCriancas) elCriancas.textContent = '0';
   if (elNiver) elNiver.textContent = ativos.filter(m => isAniversarioMes(m.nascimento, new Date().getMonth())).length;
 
   // Ordena os membros em ordem alfabética de A a Z
@@ -1883,9 +1884,8 @@ function gerarRelatorioBoletim(mesIndex = null) {
           <th style="padding:10px 14px; width:70px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Dia</th>
           <th style="padding:10px 14px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Nome do Membro</th>
           <th style="padding:10px 14px; width:90px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Idade</th>
-          <th style="padding:10px 14px; width:100px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Categoria</th>
           <th style="padding:10px 14px; width:150px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Telefone / WhatsApp</th>
-          <th style="padding:10px 14px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Observação / Cargo</th>
+          <th style="padding:10px 14px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Observação</th>
         </tr>
       </thead>
       <tbody>
@@ -1897,7 +1897,6 @@ function gerarRelatorioBoletim(mesIndex = null) {
               <td style="padding:10px 14px; border-top:1px solid #e2ebd8;"><strong>Dia ${dia}</strong></td>
               <td style="padding:10px 14px; border-top:1px solid #e2ebd8; font-weight:600;">${m.nome}</td>
               <td style="padding:10px 14px; border-top:1px solid #e2ebd8; color:#2b4c16; font-weight:600;">${idade !== '' ? idade + ' anos' : '-'}</td>
-              <td style="padding:10px 14px; border-top:1px solid #e2ebd8;">${m.categoria}</td>
               <td style="padding:10px 14px; border-top:1px solid #e2ebd8;">${m.telefone || '-'}</td>
               <td style="padding:10px 14px; border-top:1px solid #e2ebd8;">${m.observacao || m.cargo || '-'}</td>
             </tr>
@@ -1937,7 +1936,7 @@ function gerarRelatorioGeralMembros() {
 
   const homens = ativos.filter(m => m.categoria === 'Homem').length;
   const mulheres = ativos.filter(m => m.categoria === 'Mulher').length;
-  const criancas = ativos.filter(m => m.categoria === 'Criança').length;
+  // apenas Homem e Mulher
 
   content.innerHTML = `
     <table class="data-table" style="width:100%; border:1px solid #d5dec9; margin-top:16px;">
@@ -1945,11 +1944,10 @@ function gerarRelatorioGeralMembros() {
         <tr style="background:#eaf2e1;">
           <th style="padding:10px 14px; width:45px; border-bottom:2px solid #b8cb9f; color:#1f3711; text-align:center;">Nº</th>
           <th style="padding:10px 14px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Nome do Membro</th>
-          <th style="padding:10px 14px; width:95px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Categoria</th>
           <th style="padding:10px 14px; width:80px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Idade</th>
           <th style="padding:10px 14px; width:100px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Nascimento</th>
           <th style="padding:10px 14px; width:140px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Telefone / WhatsApp</th>
-          <th style="padding:10px 14px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Observação / Cargo</th>
+          <th style="padding:10px 14px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Observação</th>
         </tr>
       </thead>
       <tbody>
@@ -1964,7 +1962,6 @@ function gerarRelatorioGeralMembros() {
             <tr>
               <td style="padding:10px 14px; border-top:1px solid #e2ebd8; text-align:center; color:#555;">${idx + 1}</td>
               <td style="padding:10px 14px; border-top:1px solid #e2ebd8; font-weight:600;">${m.nome}</td>
-              <td style="padding:10px 14px; border-top:1px solid #e2ebd8;">${m.categoria}</td>
               <td style="padding:10px 14px; border-top:1px solid #e2ebd8;">${idade !== '' ? idade + ' anos' : '-'}</td>
               <td style="padding:10px 14px; border-top:1px solid #e2ebd8;">${nascFormat}</td>
               <td style="padding:10px 14px; border-top:1px solid #e2ebd8;">${m.telefone || '-'}</td>
@@ -1976,7 +1973,7 @@ function gerarRelatorioGeralMembros() {
     </table>
     <div style="margin-top: 20px; padding: 14px 18px; background: #f6faf1; border-radius: 8px; border-left: 4px solid #2b4c16; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 13.5px;">
       <span><strong>Total de Membros Ativos:</strong> ${ativos.length}</span>
-      <span><strong>Distribuição:</strong> ${homens} Homens &bull; ${mulheres} Mulheres &bull; ${criancas} Crianças</span>
+      <span><strong>Distribuição:</strong> ${homens} Homens &bull; ${mulheres} Mulheres</span>
     </div>
   `;
 }
@@ -2009,7 +2006,6 @@ function gerarRelatorioEventos() {
         <tr style="background:#eaf2e1;">
           <th style="padding:10px 14px; width:130px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Data</th>
           <th style="padding:10px 14px; width:90px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Horário</th>
-          <th style="padding:10px 14px; width:110px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Tipo</th>
           <th style="padding:10px 14px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Título / Evento</th>
           <th style="padding:10px 14px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Local / Departamento</th>
         </tr>
@@ -2034,7 +2030,6 @@ function gerarRelatorioEventos() {
             <tr>
               <td style="padding:10px 14px; border-top:1px solid #e2ebd8;"><strong>${dataStr}</strong> <small style="color:#666;">(${diaSemana})</small></td>
               <td style="padding:10px 14px; border-top:1px solid #e2ebd8; font-weight:600;">${ev.hora || '19:00'}</td>
-              <td style="padding:10px 14px; border-top:1px solid #e2ebd8;"><span class="badge-tag">${ev.tipo || 'Culto'}</span></td>
               <td style="padding:10px 14px; border-top:1px solid #e2ebd8; font-weight:600;">${ev.titulo}</td>
               <td style="padding:10px 14px; border-top:1px solid #e2ebd8;">${ev.local || 'Templo Central'}</td>
             </tr>
