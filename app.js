@@ -71,6 +71,7 @@ function isUserAdmin() {
 }
 
 const STORAGE_MEMBROS = 'ies_gestao_membros_v1';
+const STORAGE_VISITANTES = 'ies_gestao_visitantes_v1';
 const STORAGE_EVENTOS = 'ies_gestao_eventos_v1';
 const STORAGE_CONFIG = 'ies_gestao_config_v1';
 const STORAGE_SIDEBAR = 'ies_gestao_sidebar_v1';
@@ -80,17 +81,21 @@ const DEFAULT_CONFIG = {
   nomeIgreja: 'Igreja Evangélica Sementeira Piedade',
   cidade: 'Piedade - SP',
   telAdmin: '(11) 98452-1144',
-  msgWhatsapp: 'Graça e paz, {NOME}! Em nome de toda a família da Igreja Evangélica Sementeira, te desejamos um abençoado e Feliz Aniversário! Que o Senhor derrame ricas bênçãos sobre seus passos, renovando sua força e alegria a cada dia. (Salmos 118:24) 🎂🎉🙏'
+  msgWhatsapp: 'Graça e paz, {NOME}! Em nome de toda a família da Igreja Evangélica Sementeira, te desejamos um abençoado e Feliz Aniversário! Que o Senhor derrame ricas bênçãos sobre seus passos, renovando sua força e alegria a cada dia. (Salmos 118:24) 🎂🎉🙏',
+  msgWhatsappVisitante: 'Graça e paz, {NOME}! Foi uma alegria receber você na Igreja Evangélica Sementeira! Que Deus abençoe grandemente sua vida e sua família. 🙏✨'
 };
 
 // Estado Global
 let membros = [];
+let visitantes = [];
 let eventos = [];
 let config = { ...DEFAULT_CONFIG };
 let currentView = 'home';
 let donutChartInstance = null;
 let anivChartInstance = null;
 let currentAnivPeriod = 3;
+let visitantesChartInstance = null;
+let currentVisitantesYear = new Date().getFullYear();
 let currentCalDate = new Date(); // Data do calendário atual
 let selectedAnivMonth = new Date().getMonth(); // 0 a 11
 let currentMemberFilter = 'todos';
@@ -295,6 +300,19 @@ function iniciarSincronizacaoFirestore() {
   });
   firestoreUnsubs.push(unsubMembros);
 
+  // 1b. Sincronizar Visitantes
+  const unsubVisitantes = db.collection('visitantes').onSnapshot((snapshot) => {
+    visitantes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    localStorage.setItem(STORAGE_VISITANTES, JSON.stringify(visitantes));
+    atualizarTudo();
+  }, (err) => {
+    console.warn('Firestore Visitantes aviso:', err);
+    if (err && err.code === 'permission-denied') {
+      mostrarToast('Sem permissão no Firestore para ler a coleção "visitantes". Verifique as regras do Firebase.', 'warning');
+    }
+  });
+  firestoreUnsubs.push(unsubVisitantes);
+
   // 2. Sincronizar Eventos
   const unsubEventos = db.collection('eventos').onSnapshot((snapshot) => {
     eventos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -385,6 +403,8 @@ function carregarDados() {
         const rawM = localStorage.getItem(STORAGE_MEMBROS);
     membros = rawM ? JSON.parse(rawM) : getInitialMembers();
 
+    const rawV = localStorage.getItem(STORAGE_VISITANTES);
+    visitantes = rawV ? JSON.parse(rawV) : [];
 
     const rawE = localStorage.getItem(STORAGE_EVENTOS);
     eventos = rawE ? JSON.parse(rawE) : getInitialEvents();
@@ -421,6 +441,11 @@ function carregarDados() {
 
 function salvarMembros() {
   localStorage.setItem(STORAGE_MEMBROS, JSON.stringify(membros));
+  atualizarTudo();
+}
+
+function salvarVisitantes() {
+  localStorage.setItem(STORAGE_VISITANTES, JSON.stringify(visitantes));
   atualizarTudo();
 }
 
@@ -638,6 +663,7 @@ function trocarVisualizacao(viewName) {
   const viewMap = {
     'home': 'viewHome',
     'membros': 'viewMembros',
+    'visitantes': 'viewVisitantes',
     'aniversariantes-dia': 'viewAniversariantesDia',
     'aniversariantes-mes': 'viewAniversariantesMes',
     'eventos': 'viewEventos',
@@ -657,6 +683,7 @@ function trocarVisualizacao(viewName) {
   const titulos = {
     'home': 'Painel Geral',
     'membros': 'Membros',
+    'visitantes': 'Visitantes',
     'aniversariantes-dia': 'Aniversariantes do Dia',
     'aniversariantes-mes': 'Aniversariantes do Mês',
     'eventos': 'Eventos',
@@ -674,6 +701,9 @@ function trocarVisualizacao(viewName) {
   // 'Novo Evento': apenas na aba home e eventos
   const btnTopNovoMembro = document.getElementById('btnTopNovoMembro');
   const btnTopNovoEvento = document.getElementById('btnTopNovoEvento');
+  const btnTopNovoVisitante = document.getElementById('btnTopNovoVisitante');
+  const membrosSearchWrap = document.getElementById('membrosSearchWrap');
+  const visitantesSearchWrap = document.getElementById('visitantesSearchWrap');
 
   if (btnTopNovoMembro) {
     btnTopNovoMembro.style.display = (viewName === 'home' || viewName === 'membros') ? 'inline-flex' : 'none';
@@ -681,9 +711,19 @@ function trocarVisualizacao(viewName) {
   if (btnTopNovoEvento) {
     btnTopNovoEvento.style.display = (viewName === 'home' || viewName === 'eventos') ? 'inline-flex' : 'none';
   }
+  if (btnTopNovoVisitante) {
+    btnTopNovoVisitante.style.display = (viewName === 'visitantes') ? 'inline-flex' : 'none';
+  }
+  if (membrosSearchWrap) {
+    membrosSearchWrap.style.display = (viewName === 'membros') ? 'block' : 'none';
+  }
+  if (visitantesSearchWrap) {
+    visitantesSearchWrap.style.display = (viewName === 'visitantes') ? 'block' : 'none';
+  }
 
   // Renderizações específicas
   if (viewName === 'membros') renderizarTabelaMembros();
+  if (viewName === 'visitantes') renderizarTabelaVisitantes();
   if (viewName === 'aniversariantes-dia') renderizarAniversariantesDia();
   if (viewName === 'aniversariantes-mes') renderizarTabelaAniversariantesMes();
   if (viewName === 'eventos') renderizarTabelaEventos();
@@ -842,6 +882,50 @@ function renderizarProximosAniversariantes() {
           <i class="ph-fill ph-whatsapp-logo"></i>
           <span>Enviar mensagem</span>
         </button>
+      </div>
+    `;
+  }).join('');
+}
+
+// ================= ÚLTIMOS VISITANTES NA HOME =================
+function renderizarVisitantesHome() {
+  const listEl = document.getElementById('homeVisitantesList');
+  if (!listEl) return;
+
+  const ordenados = [...visitantes].sort((a, b) => {
+    const da = a.dataVisita || '';
+    const dbDate = b.dataVisita || '';
+    if (da !== dbDate) return dbDate.localeCompare(da);
+    return (a.nome || '').trim().localeCompare((b.nome || '').trim(), 'pt-BR', { sensitivity: 'base' });
+  }).slice(0, 5);
+
+  if (ordenados.length === 0) {
+    listEl.innerHTML = '<div style="padding:24px; text-align:center; color:#888;">Nenhum visitante cadastrado ainda.</div>';
+    return;
+  }
+
+  listEl.innerHTML = ordenados.map((v, idx) => {
+    const parts = v.dataVisita ? v.dataVisita.split('-') : ['', '', ''];
+    const dataFormatada = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : '-';
+    const temWapp = v.telefone && v.temWhatsapp !== false && v.temWhatsapp !== 'nao';
+    const avatarCls = ['avatar-mo', 'avatar-pr', 'avatar-ms', 'avatar-ss', 'avatar-es'][idx % 5];
+    const iniciais = getIniciais(v.nome);
+
+    return `
+      <div class="birthday-row-item">
+        <div class="birthday-row-left">
+          <div class="avatar-circle-initials ${avatarCls}">${iniciais}</div>
+          <div class="birthday-name-group">
+            <span class="birthday-member-name">${v.nome}</span>
+            <span class="birthday-tag-date">Visita em ${dataFormatada}</span>
+          </div>
+        </div>
+        ${temWapp ? `
+          <button class="btn-send-whatsapp-pill" onclick="abrirWhatsappVisitante('${v.id}')" title="Enviar mensagem no WhatsApp">
+            <i class="ph-fill ph-whatsapp-logo"></i>
+            <span>Enviar mensagem</span>
+          </button>
+        ` : ''}
       </div>
     `;
   }).join('');
@@ -1145,6 +1229,217 @@ function renderizarTabelaMembros() {
       </tr>
     `;
   }).join('');
+}
+
+// ================= TABELA DE VISITANTES =================
+function renderizarTabelaVisitantes() {
+  const tbody = document.getElementById('tbodyVisitantes');
+  const busca = (document.getElementById('filterSearchVisitante')?.value || '').toLowerCase();
+  if (!tbody) return;
+
+  const filtrados = visitantes.filter(v => {
+    if (!busca) return true;
+    const matchNome = (v.nome || '').toLowerCase().includes(busca);
+    const matchObs = (v.observacao || '').toLowerCase().includes(busca);
+    const matchTel = (v.telefone || '').includes(busca);
+    return matchNome || matchObs || matchTel;
+  });
+
+  const elCount = document.getElementById('countPillVisitantes');
+  if (elCount) elCount.textContent = visitantes.length;
+
+  filtrados.sort((a, b) => {
+    const da = a.dataVisita || '';
+    const db = b.dataVisita || '';
+    if (da !== db) return db.localeCompare(da);
+    return (a.nome || '').trim().localeCompare((b.nome || '').trim(), 'pt-BR', { sensitivity: 'base' });
+  });
+
+  if (filtrados.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4 text-muted">Nenhum visitante encontrado.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filtrados.map(v => {
+    const parts = v.dataVisita ? v.dataVisita.split('-') : ['', '', ''];
+    const dataFormatada = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : '-';
+    const temWapp = v.temWhatsapp !== false && v.temWhatsapp !== 'nao';
+
+    return `
+      <tr>
+        <td>
+          <div class="member-cell-info">
+            <div class="avatar-circle-sm">${getIniciais(v.nome)}</div>
+            <div>
+              <span class="member-name-bold">${v.nome}</span>
+            </div>
+          </div>
+        </td>
+        <td class="text-center">${dataFormatada}</td>
+        <td class="text-center">
+          ${v.telefone ? `
+            <span>${formatarTelefone(v.telefone)}</span>
+            ${temWapp
+              ? '<i class="ph-fill ph-whatsapp-logo" style="color:var(--whatsapp); margin-left:4px; font-size:14px;" title="Possui WhatsApp"></i>'
+              : '<small class="text-muted" style="display:block; font-size:11px; color:#999;">(Sem WhatsApp)</small>'}
+          ` : '<span class="text-muted">Não informado</span>'}
+        </td>
+        <td class="text-center">${v.observacao || '-'}</td>
+        <td class="text-center">
+          <div class="table-actions-cell">
+            ${(v.telefone && temWapp) ? `
+              <button class="table-action-btn btn-wapp" onclick="abrirWhatsappVisitante('${v.id}')" title="Enviar WhatsApp">
+                <i class="ph-fill ph-whatsapp-logo"></i>
+              </button>
+            ` : ''}
+            ${isUserAdmin() ? `
+              <button class="table-action-btn" onclick="abrirModalEditarVisitante('${v.id}')" title="Editar">
+                <i class="ph-bold ph-pencil-simple"></i>
+              </button>
+              <button class="table-action-btn btn-trash" onclick="excluirVisitante('${v.id}')" title="Excluir">
+                <i class="ph-bold ph-trash"></i>
+              </button>
+            ` : `
+              <button class="table-action-btn" onclick="abrirModalEditarVisitante('${v.id}')" title="Ver Detalhes">
+                <i class="ph-bold ph-eye"></i>
+              </button>
+            `}
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function abrirModalNovoVisitante() {
+  if (!isUserAdmin()) {
+    mostrarToast('Apenas o Administrador pode cadastrar novos visitantes.', 'warning');
+    return;
+  }
+  const form = document.getElementById('formVisitante');
+  if (form) form.reset();
+  document.getElementById('visitanteId').value = '';
+  const selWapp = document.getElementById('visitanteTemWhatsapp');
+  if (selWapp) selWapp.value = 'sim';
+  const inputData = document.getElementById('visitanteDataVisita');
+  if (inputData) inputData.value = new Date().toISOString().split('T')[0];
+
+  const modal = document.getElementById('modalVisitante');
+  modal.querySelectorAll('input, select, textarea').forEach(el => el.disabled = false);
+  const btnSalvar = modal.querySelector('button[type="submit"]');
+  if (btnSalvar) btnSalvar.style.display = 'inline-flex';
+
+  document.getElementById('modalVisitanteTitle').textContent = 'Cadastrar Novo Visitante';
+  modal.classList.add('active');
+}
+
+function abrirModalEditarVisitante(id) {
+  const v = visitantes.find(x => x.id === id);
+  if (!v) return;
+  document.getElementById('visitanteId').value = v.id;
+  document.getElementById('visitanteNome').value = v.nome || '';
+  document.getElementById('visitanteDataVisita').value = v.dataVisita || '';
+  document.getElementById('visitanteTelefone').value = formatarTelefone(v.telefone || '');
+  const selWapp = document.getElementById('visitanteTemWhatsapp');
+  if (selWapp) selWapp.value = (v.temWhatsapp !== false && v.temWhatsapp !== 'nao') ? 'sim' : 'nao';
+  document.getElementById('visitanteObservacao').value = v.observacao || '';
+
+  const isAdmin = isUserAdmin();
+  const modal = document.getElementById('modalVisitante');
+  modal.querySelectorAll('input, select, textarea').forEach(el => el.disabled = !isAdmin);
+  const btnSalvar = modal.querySelector('button[type="submit"]');
+  if (btnSalvar) btnSalvar.style.display = isAdmin ? 'inline-flex' : 'none';
+
+  document.getElementById('modalVisitanteTitle').textContent = isAdmin ? 'Editar Visitante' : 'Detalhes do Visitante (Somente Leitura)';
+  modal.classList.add('active');
+}
+
+function salvarFormVisitante(e) {
+  e.preventDefault();
+  if (!isUserAdmin()) {
+    mostrarToast('Apenas o Administrador pode salvar alterações.', 'warning');
+    return;
+  }
+  const id = document.getElementById('visitanteId').value;
+  const nome = document.getElementById('visitanteNome').value.trim();
+  const dataVisita = document.getElementById('visitanteDataVisita').value;
+  const telefone = formatarTelefone(document.getElementById('visitanteTelefone').value.trim());
+  const temWhatsapp = document.getElementById('visitanteTemWhatsapp') ? (document.getElementById('visitanteTemWhatsapp').value === 'sim') : true;
+  const observacao = document.getElementById('visitanteObservacao').value.trim();
+
+  if (!nome || !dataVisita) {
+    alert('Preencha o Nome e a Data da Visita.');
+    return;
+  }
+
+  let visitanteSalvo = null;
+  if (id) {
+    const idx = visitantes.findIndex(x => x.id === id);
+    if (idx !== -1) {
+      visitantes[idx] = { ...visitantes[idx], nome, dataVisita, telefone, temWhatsapp, observacao };
+      visitanteSalvo = visitantes[idx];
+      mostrarToast('Visitante atualizado com sucesso!', 'success');
+    }
+  } else {
+    const novo = {
+      id: 'vis_' + Date.now(),
+      nome,
+      dataVisita,
+      telefone,
+      temWhatsapp,
+      observacao,
+      dataCadastro: new Date().toISOString()
+    };
+    visitantes.unshift(novo);
+    visitanteSalvo = novo;
+    mostrarToast('Novo visitante cadastrado!', 'success');
+  }
+
+  salvarVisitantes();
+  renderizarTabelaVisitantes();
+  if (db && visitanteSalvo) {
+    db.collection('visitantes').doc(visitanteSalvo.id).set(visitanteSalvo).catch(err => {
+      console.error('Erro ao salvar visitante no Firestore:', err);
+      mostrarToast('Não foi possível gravar na nuvem (' + (err.code || 'erro') + '). Verifique as regras do Firestore para "visitantes".', 'warning');
+    });
+  }
+  document.getElementById('modalVisitante').classList.remove('active');
+}
+
+function excluirVisitante(id) {
+  if (!isUserAdmin()) {
+    mostrarToast('Apenas o Administrador pode excluir cadastros.', 'warning');
+    return;
+  }
+  const v = visitantes.find(x => x.id === id);
+  if (!v) return;
+  if (confirm(`Tem certeza que deseja excluir o visitante "${v.nome}"?`)) {
+    visitantes = visitantes.filter(x => x.id !== id);
+    salvarVisitantes();
+    if (db) {
+      db.collection('visitantes').doc(id).delete().catch(err => console.error('Erro ao excluir visitante no Firestore:', err));
+    }
+    mostrarToast('Visitante removido.', 'info');
+    renderizarTabelaVisitantes();
+  }
+}
+
+function abrirWhatsappVisitante(id) {
+  const v = visitantes.find(x => x.id === id);
+  if (!v || !v.telefone) return;
+  if (v.temWhatsapp === false || v.temWhatsapp === 'nao') {
+    mostrarToast('Este visitante não possui WhatsApp cadastrado.', 'warning');
+    return;
+  }
+  const numeroLimpo = v.telefone.replace(/\D/g, '');
+  if (!numeroLimpo) {
+    mostrarToast('Número de telefone inválido.', 'warning');
+    return;
+  }
+  const foneFinal = numeroLimpo.startsWith('55') ? numeroLimpo : `55${numeroLimpo}`;
+  const msgTemplate = config.msgWhatsappVisitante || DEFAULT_CONFIG.msgWhatsappVisitante;
+  const msg = msgTemplate.replace(/\{NOME\}/g, v.nome);
+  window.open(`https://wa.me/${foneFinal}?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
 // ================= ANIVERSARIANTES DO MÊS =================
@@ -1789,6 +2084,7 @@ function exportarBackup() {
     versao: '1.0',
     dataBackup: new Date().toISOString(),
     membros,
+    visitantes,
     eventos,
     config
   };
@@ -1812,6 +2108,10 @@ function restaurarBackup(file) {
       if (data.membros && Array.isArray(data.membros)) {
         membros = data.membros;
         salvarMembros();
+      }
+      if (data.visitantes && Array.isArray(data.visitantes)) {
+        visitantes = data.visitantes;
+        salvarVisitantes();
       }
       if (data.eventos && Array.isArray(data.eventos)) {
         eventos = data.eventos;
@@ -2090,13 +2390,15 @@ function atualizarTudo() {
   atualizarKpisEAlerta();
   atualizarGraficoRosca();
   atualizarGraficoAniversariantes();
+  atualizarGraficoVisitantes();
   renderizarProximosAniversariantes();
-  renderizarCadastrosRecentes();
+  renderizarVisitantesHome();
   renderizarProximosEventos();
   renderizarCalendarioMini();
 
   // Pré-renderiza todas as abas para que estejam prontas instantaneamente
   renderizarTabelaMembros();
+  renderizarTabelaVisitantes();
   renderizarAniversariantesDia();
   renderizarTabelaAniversariantesMes();
   renderizarTabelaEventos();
@@ -2138,11 +2440,13 @@ function inicializarAppCompleta() {
   document.getElementById('btnNovoMembroAba')?.addEventListener('click', abrirModalNovoMembro);
   document.getElementById('btnTopNovoEvento')?.addEventListener('click', abrirModalNovoEvento);
   document.getElementById('btnCriarNovoEventoAba')?.addEventListener('click', abrirModalNovoEvento);
+  document.getElementById('btnTopNovoVisitante')?.addEventListener('click', abrirModalNovoVisitante);
 
   // Links do Dashboard
   document.getElementById('linkVerTodosAniversariantes')?.addEventListener('click', () => trocarVisualizacao('aniversariantes-mes'));
   document.getElementById('btnFooterVerAniversariantes')?.addEventListener('click', () => trocarVisualizacao('aniversariantes-mes'));
-  document.getElementById('linkVerTodosRecentes')?.addEventListener('click', () => trocarVisualizacao('membros'));
+  document.getElementById('linkVerTodosVisitantes')?.addEventListener('click', () => trocarVisualizacao('visitantes'));
+  document.getElementById('linkVerTodosVisitantesChart')?.addEventListener('click', () => trocarVisualizacao('visitantes'));
   document.getElementById('linkVerTodosEventos')?.addEventListener('click', () => trocarVisualizacao('eventos'));
   document.getElementById('btnFooterVerCalendario')?.addEventListener('click', () => trocarVisualizacao('calendario'));
   document.getElementById('btnBannerVerMembros')?.addEventListener('click', () => trocarVisualizacao('membros'));
@@ -2178,6 +2482,7 @@ function inicializarAppCompleta() {
   });
 
   document.getElementById('filterSearchMembro')?.addEventListener('input', renderizarTabelaMembros);
+  document.getElementById('filterSearchVisitante')?.addEventListener('input', renderizarTabelaVisitantes);
 
   // Controles do Calendário
   document.getElementById('btnCalPrev')?.addEventListener('click', () => {
@@ -2205,11 +2510,15 @@ function inicializarAppCompleta() {
 
   // Formulários
   document.getElementById('formMembro')?.addEventListener('submit', salvarFormMembro);
+  document.getElementById('formVisitante')?.addEventListener('submit', salvarFormVisitante);
   document.getElementById('formEvento')?.addEventListener('submit', salvarFormEvento);
 
   // Modais Close buttons
   document.getElementById('btnCloseModalMembro')?.addEventListener('click', () => document.getElementById('modalMembro').classList.remove('active'));
   document.getElementById('btnCancelModalMembro')?.addEventListener('click', () => document.getElementById('modalMembro').classList.remove('active'));
+
+  document.getElementById('btnCloseModalVisitante')?.addEventListener('click', () => document.getElementById('modalVisitante').classList.remove('active'));
+  document.getElementById('btnCancelModalVisitante')?.addEventListener('click', () => document.getElementById('modalVisitante').classList.remove('active'));
 
   document.getElementById('btnCloseModalEvento')?.addEventListener('click', () => document.getElementById('modalEvento').classList.remove('active'));
   document.getElementById('btnCancelModalEvento')?.addEventListener('click', () => document.getElementById('modalEvento').classList.remove('active'));
@@ -2224,15 +2533,44 @@ function inicializarAppCompleta() {
   // Configurações
   const txtMsg = document.getElementById('txtConfigMsgWhatsapp');
   if (txtMsg) {
-    txtMsg.value = config.msgWhatsapp;
+    txtMsg.value = config.msgWhatsapp || DEFAULT_CONFIG.msgWhatsapp;
     txtMsg.addEventListener('input', () => {
       document.getElementById('previewWhatsappText').textContent = txtMsg.value.replace(/\{NOME\}/g, 'Moisés de Oliveira');
     });
-    document.getElementById('previewWhatsappText').textContent = config.msgWhatsapp.replace(/\{NOME\}/g, 'Moisés de Oliveira');
+    document.getElementById('previewWhatsappText').textContent = (config.msgWhatsapp || DEFAULT_CONFIG.msgWhatsapp).replace(/\{NOME\}/g, 'Moisés de Oliveira');
   }
 
+  const txtMsgVisitante = document.getElementById('txtConfigMsgVisitante');
+  if (txtMsgVisitante) {
+    txtMsgVisitante.value = config.msgWhatsappVisitante || DEFAULT_CONFIG.msgWhatsappVisitante;
+    txtMsgVisitante.addEventListener('input', () => {
+      document.getElementById('previewWhatsappVisitanteText').textContent = txtMsgVisitante.value.replace(/\{NOME\}/g, 'João da Silva');
+    });
+    document.getElementById('previewWhatsappVisitanteText').textContent = (config.msgWhatsappVisitante || DEFAULT_CONFIG.msgWhatsappVisitante).replace(/\{NOME\}/g, 'João da Silva');
+  }
+
+  window.preencherConfigForm = function () {
+    const elMsg = document.getElementById('txtConfigMsgWhatsapp');
+    const elPrev = document.getElementById('previewWhatsappText');
+    if (elMsg) elMsg.value = config.msgWhatsapp || DEFAULT_CONFIG.msgWhatsapp;
+    if (elPrev) elPrev.textContent = (config.msgWhatsapp || DEFAULT_CONFIG.msgWhatsapp).replace(/\{NOME\}/g, 'Moisés de Oliveira');
+
+    const elMsgVis = document.getElementById('txtConfigMsgVisitante');
+    const elPrevVis = document.getElementById('previewWhatsappVisitanteText');
+    if (elMsgVis) elMsgVis.value = config.msgWhatsappVisitante || DEFAULT_CONFIG.msgWhatsappVisitante;
+    if (elPrevVis) elPrevVis.textContent = (config.msgWhatsappVisitante || DEFAULT_CONFIG.msgWhatsappVisitante).replace(/\{NOME\}/g, 'João da Silva');
+
+    const elNome = document.getElementById('cfgNomeIgreja');
+    const elCidade = document.getElementById('cfgCidadeIgreja');
+    const elTel = document.getElementById('cfgTelAdmin');
+    if (elNome && config.nomeIgreja) elNome.value = config.nomeIgreja;
+    if (elCidade && config.cidade) elCidade.value = config.cidade;
+    if (elTel && config.telAdmin) elTel.value = config.telAdmin;
+  };
+
   document.getElementById('btnSalvarConfig')?.addEventListener('click', () => {
-    config.msgWhatsapp = txtMsg.value;
+    if (txtMsg) config.msgWhatsapp = txtMsg.value;
+    if (txtMsgVisitante) config.msgWhatsappVisitante = txtMsgVisitante.value;
     config.nomeIgreja = document.getElementById('cfgNomeIgreja').value;
     config.cidade = document.getElementById('cfgCidadeIgreja').value;
     config.telAdmin = document.getElementById('cfgTelAdmin').value;
@@ -2242,6 +2580,7 @@ function inicializarAppCompleta() {
   // Backup
     // Máscaras de Telefone no Padrão: 15 99769-6207
   aplicarMascaraTelefone(document.getElementById('membroTelefone'));
+  aplicarMascaraTelefone(document.getElementById('visitanteTelefone'));
   aplicarMascaraTelefone(document.getElementById('cfgTelAdmin'));
 
   document.getElementById('btnExportarDados')?.addEventListener('click', exportarBackup);
@@ -2249,39 +2588,6 @@ function inicializarAppCompleta() {
     if (e.target.files && e.target.files[0]) restaurarBackup(e.target.files[0]);
   });
 
-  // Busca Rápida Topbar
-  const quickInput = document.getElementById('quickSearchInput');
-  const dropdown = document.getElementById('searchResultsDropdown');
-  if (quickInput && dropdown) {
-    quickInput.addEventListener('input', () => {
-      const q = quickInput.value.toLowerCase().trim();
-      if (!q) {
-        dropdown.style.display = 'none';
-        return;
-      }
-      const matches = membros
-        .filter(m => (m.nome || '').toLowerCase().includes(q))
-        .sort((a, b) => (a.nome || '').trim().localeCompare((b.nome || '').trim(), 'pt-BR', { sensitivity: 'base' }))
-        .slice(0, 6);
-      if (matches.length === 0) {
-        dropdown.innerHTML = '<div style="padding:12px; color:#888;">Nenhum membro encontrado.</div>';
-      } else {
-        dropdown.innerHTML = matches.map(m => `
-          <div style="padding:10px 14px; border-bottom:1px solid #f0f0f0; cursor:pointer; display:flex; justify-content:space-between;" onclick="abrirModalEditarMembro('${m.id}')">
-            <strong>${m.nome}</strong>
-            <small style="color:#777;">${m.categoria}</small>
-          </div>
-        `).join('');
-      }
-      dropdown.style.display = 'block';
-    });
-
-    document.addEventListener('click', (e) => {
-      if (!quickInput.contains(e.target) && !dropdown.contains(e.target)) {
-        dropdown.style.display = 'none';
-      }
-    });
-  }
 
   // Relatórios & Impressão
   document.getElementById('btnReportAniversariantes')?.addEventListener('click', () => selecionarRelatorio('aniversariantes'));
@@ -2465,136 +2771,61 @@ function desativarMembro(id) {
 }
 
 
-// ================= GRÁFICO DE ANIVERSARIANTES (HISTÓRICO DE MESES) =================
-function mudarPeriodoGraficoAniversariantes(qtdMeses) {
-  currentAnivPeriod = qtdMeses;
-  atualizarGraficoAniversariantes();
-}
-
-function alternarPeriodoGraficoAniversariantes() {
-  if (currentAnivPeriod === 3) {
-    currentAnivPeriod = 6;
-  } else if (currentAnivPeriod === 6) {
-    currentAnivPeriod = 12;
-  } else {
-    currentAnivPeriod = 3;
-  }
-  atualizarGraficoAniversariantes();
-}
-
-function calcularAniversariantesPorMes(qtdMeses = 3) {
-  const meses = [];
-  const hoje = new Date();
-  const y = hoje.getFullYear();
-  const m = hoje.getMonth(); // 0 a 11
-
-  for (let i = qtdMeses - 1; i >= 0; i--) {
-    let mesIdx = m - i;
-    let ano = y;
-    while (mesIdx < 0) {
-      mesIdx += 12;
-      ano -= 1;
-    }
-    const nomeMes = NOMES_MESES[mesIdx];
-    const curto = nomeMes.substring(0, 3);
-    meses.push({
-      ano: ano,
-      mes: mesIdx,
-      label: qtdMeses > 6 ? `${curto}/${String(ano).slice(-2)}` : curto,
-      labelCompleto: nomeMes,
-      isMesAtual: mesIdx === m && ano === y,
-      total: 0
-    });
-  }
-
-  // Considera ativos todos os membros que não estejam explicitamente com status inativo
-  const ativos = membros.filter(m => (m.status || 'ativo').toLowerCase() !== 'inativo');
-
-  meses.forEach(item => {
-    item.total = ativos.filter(m => isAniversarioMes(m.nascimento, item.mes)).length;
-  });
-
-  return meses;
-}
-
+// ================= GRÁFICO DE ANIVERSARIANTES POR MÊS (12 MESES) =================
 function atualizarGraficoAniversariantes() {
   const ctx = document.getElementById('aniversariantesChart');
   if (!ctx) return;
 
-  // Garante que a biblioteca Chart.js já terminou de carregar
   if (typeof Chart === 'undefined') {
     setTimeout(atualizarGraficoAniversariantes, 150);
     return;
   }
 
-  // Atualiza pílulas ativas
-  document.querySelectorAll('.growth-pill-selector .btn-pill-period').forEach(btn => {
-    const p = parseInt(btn.getAttribute('data-period'), 10);
-    btn.classList.toggle('active', p === currentAnivPeriod);
-  });
-
-  // Atualiza títulos e botões
   const titulo = document.getElementById('tituloGraficoAniversariantes');
   if (titulo) {
-    titulo.textContent = `Aniversariantes (${currentAnivPeriod} meses)`;
+    titulo.textContent = 'Aniversariantes por Mês';
   }
 
-  const labelBtn = document.getElementById('labelPeriodoBotaoAniv');
-  if (labelBtn) {
-    if (currentAnivPeriod === 3) {
-      labelBtn.textContent = 'Ver 6 meses';
-    } else if (currentAnivPeriod === 6) {
-      labelBtn.textContent = 'Ver 12 meses';
-    } else {
-      labelBtn.textContent = 'Ver 3 meses';
-    }
-  }
+  const labelsMeses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+  const mesAtual = new Date().getMonth();
 
-  const labelFooter = document.getElementById('labelFooterPeriodoAniv');
-  if (labelFooter) {
-    if (currentAnivPeriod === 3) {
-      labelFooter.textContent = 'Ver 6 meses anteriores →';
-    } else if (currentAnivPeriod === 6) {
-      labelFooter.textContent = 'Ver 12 meses anteriores →';
-    } else {
-      labelFooter.textContent = 'Voltar para 3 meses →';
-    }
-  }
+  // Considera ativos todos os membros que não estejam explicitamente com status inativo
+  const ativos = membros.filter(m => (m.status || 'ativo').toLowerCase() !== 'inativo');
 
-  const mesesData = calcularAniversariantesPorMes(currentAnivPeriod);
-  const totalPeriodo = mesesData.reduce((acc, item) => acc + item.total, 0);
+  const dataValues = labelsMeses.map((_, mesIdx) => {
+    return ativos.filter(m => isAniversarioMes(m.nascimento, mesIdx)).length;
+  });
+
+  const totalGeral = dataValues.reduce((acc, v) => acc + v, 0);
 
   const elTotal = document.getElementById('totalAnivPeriodo');
-  if (elTotal) elTotal.textContent = totalPeriodo;
+  if (elTotal) elTotal.textContent = totalGeral;
 
   const elBadge = document.getElementById('badgeAnivPeriodo');
   if (elBadge) {
-    elBadge.textContent = totalPeriodo === 1 ? 'aniversariante' : 'aniversariantes';
+    elBadge.textContent = totalGeral === 1 ? 'aniversariante' : 'aniversariantes';
   }
 
-  const labels = mesesData.map(m => m.label);
-  const dataValues = mesesData.map(m => m.total);
-
-  // Paleta de cores com realce no mês atual
-  const bgColors = mesesData.map(m => m.isMesAtual ? '#ea580c' : '#fb923c');
-  const hoverColors = mesesData.map(m => m.isMesAtual ? '#c2410c' : '#f97316');
+  // Paleta de cores laranja com realce no mês atual
+  const bgColors = labelsMeses.map((_, idx) => idx === mesAtual ? '#ea580c' : '#fdba74');
+  const hoverColors = labelsMeses.map((_, idx) => idx === mesAtual ? '#c2410c' : '#fb923c');
 
   const maxVal = Math.max(...dataValues, 0);
   const suggestedMax = maxVal < 4 ? 4 : maxVal + 1;
 
   if (anivChartInstance) {
-    anivChartInstance.data.labels = labels;
+    anivChartInstance.data.labels = labelsMeses;
     anivChartInstance.data.datasets[0].data = dataValues;
     anivChartInstance.data.datasets[0].backgroundColor = bgColors;
     anivChartInstance.data.datasets[0].hoverBackgroundColor = hoverColors;
-    anivChartInstance.data.datasets[0].maxBarThickness = currentAnivPeriod > 6 ? 24 : 40;
+    anivChartInstance.data.datasets[0].maxBarThickness = 28;
     anivChartInstance.options.scales.y.suggestedMax = suggestedMax;
     anivChartInstance.update();
   } else {
     anivChartInstance = new Chart(ctx, {
       type: 'bar',
       data: {
-        labels: labels,
+        labels: labelsMeses,
         datasets: [{
           label: 'Aniversariantes',
           data: dataValues,
@@ -2602,7 +2833,7 @@ function atualizarGraficoAniversariantes() {
           hoverBackgroundColor: hoverColors,
           borderRadius: 6,
           borderSkipped: false,
-          maxBarThickness: currentAnivPeriod > 6 ? 24 : 40
+          maxBarThickness: 28
         }]
       },
       options: {
@@ -2612,18 +2843,16 @@ function atualizarGraficoAniversariantes() {
           legend: { display: false },
           tooltip: {
             backgroundColor: '#1c1d1a',
-            titleColor: '#ffffff',
-            bodyColor: '#ffffff',
-            padding: 8,
-            cornerRadius: 6,
+            padding: 10,
+            cornerRadius: 8,
             callbacks: {
-              title: function(items) {
+              title: (items) => {
                 const idx = items[0].dataIndex;
-                return `${mesesData[idx].labelCompleto} de ${mesesData[idx].ano}`;
+                return NOMES_MESES[idx];
               },
-              label: function(item) {
-                const val = item.raw;
-                return `${val} ${val === 1 ? 'aniversariante' : 'aniversariantes'}`;
+              label: (item) => {
+                const val = item.raw || 0;
+                return ` ${val} ${val === 1 ? 'aniversariante' : 'aniversariantes'}`;
               }
             }
           }
@@ -2632,19 +2861,22 @@ function atualizarGraficoAniversariantes() {
           x: {
             grid: { display: false },
             ticks: {
-              color: '#78796f',
-              font: { size: 11, family: 'Inter, sans-serif', weight: '600' }
+              color: '#64748b',
+              font: { size: 11, weight: '600' }
             }
           },
           y: {
             beginAtZero: true,
             suggestedMax: suggestedMax,
-            grid: { color: 'rgba(0, 0, 0, 0.05)' },
             ticks: {
               stepSize: 1,
               precision: 0,
-              color: '#78796f',
-              font: { size: 10, family: 'Inter, sans-serif' }
+              color: '#94a3b8',
+              font: { size: 11 }
+            },
+            grid: {
+              color: '#f1f5f9',
+              drawBorder: false
             }
           }
         }
@@ -2652,6 +2884,143 @@ function atualizarGraficoAniversariantes() {
     });
   }
 }
+// ================= GRÁFICO DE VISITANTES POR MÊS (12 MESES) =================
+function mudarAnoGraficoVisitantes(ano) {
+  currentVisitantesYear = ano;
+  atualizarGraficoVisitantes();
+}
+
+function atualizarGraficoVisitantes() {
+  const ctx = document.getElementById('visitantesMesChart');
+  if (!ctx) return;
+
+  if (typeof Chart === 'undefined') {
+    setTimeout(atualizarGraficoVisitantes, 150);
+    return;
+  }
+
+  // Monta opções de anos disponíveis a partir de 2025 até o ano atual (e anos com registros)
+  const anoAtual = new Date().getFullYear();
+  const anoBase = 2025;
+  const anosSet = new Set();
+  const maxAno = Math.max(anoAtual, currentVisitantesYear);
+  for (let y = anoBase; y <= maxAno; y++) {
+    anosSet.add(y);
+  }
+  visitantes.forEach(v => {
+    if (v.dataVisita && /^\d{4}-/.test(v.dataVisita)) {
+      const a = parseInt(v.dataVisita.slice(0, 4), 10);
+      if (a >= anoBase) {
+        anosSet.add(a);
+      }
+    }
+  });
+  const anosOrdenados = Array.from(anosSet).sort((a, b) => a - b);
+
+  const selectEl = document.getElementById('visitantesYearSelect');
+  if (selectEl) {
+    selectEl.innerHTML = anosOrdenados.map(ano => `
+      <option value="${ano}" ${ano === currentVisitantesYear ? 'selected' : ''}>${ano}</option>
+    `).join('');
+    selectEl.value = String(currentVisitantesYear);
+    selectEl.onchange = (e) => {
+      mudarAnoGraficoVisitantes(parseInt(e.target.value, 10));
+    };
+  }
+
+  const labelAno = document.getElementById('labelAnoVisitantes');
+  if (labelAno) labelAno.textContent = currentVisitantesYear;
+
+  const contagens = new Array(12).fill(0);
+  visitantes.forEach(v => {
+    if (!v.dataVisita) return;
+    const parts = v.dataVisita.split('-');
+    if (parts.length !== 3) return;
+    const ano = parseInt(parts[0], 10);
+    const mes = parseInt(parts[1], 10) - 1;
+    if (ano === currentVisitantesYear && mes >= 0 && mes <= 11) {
+      contagens[mes]++;
+    }
+  });
+
+  const totalAno = contagens.reduce((acc, n) => acc + n, 0);
+  const elTotal = document.getElementById('totalVisitantesAno');
+  if (elTotal) elTotal.textContent = totalAno;
+
+  const labelsMeses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+  const mesAtual = new Date().getMonth();
+  const cores = labelsMeses.map((_, idx) =>
+    (currentVisitantesYear === anoAtual && idx === mesAtual) ? '#16a34a' : '#86efac'
+  );
+  const coresHover = labelsMeses.map((_, idx) =>
+    (currentVisitantesYear === anoAtual && idx === mesAtual) ? '#15803d' : '#4ade80'
+  );
+
+  if (visitantesChartInstance) {
+    visitantesChartInstance.destroy();
+  }
+
+  visitantesChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labelsMeses,
+      datasets: [{
+        label: 'Visitantes',
+        data: contagens,
+        backgroundColor: cores,
+        hoverBackgroundColor: coresHover,
+        borderRadius: 6,
+        borderSkipped: false,
+        maxBarThickness: 28
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1f3711',
+          padding: 10,
+          cornerRadius: 8,
+          callbacks: {
+            title: (items) => {
+              const idx = items[0].dataIndex;
+              return `${NOMES_MESES[idx]} de ${currentVisitantesYear}`;
+            },
+            label: (item) => {
+              const val = item.raw || 0;
+              return ` ${val} ${val === 1 ? 'visitante' : 'visitantes'}`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: {
+            color: '#64748b',
+            font: { size: 11, weight: '600' }
+          }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: {
+            stepSize: 1,
+            precision: 0,
+            color: '#94a3b8',
+            font: { size: 11 }
+          },
+          grid: {
+            color: '#f1f5f9',
+            drawBorder: false
+          }
+        }
+      }
+    }
+  });
+}
+
 // ================= ZERAR BANCO DE DADOS (LIMPEZA TOTAL) =================
 async function zerarBancoDeDados() {
   if (!isUserAdmin()) {
@@ -2681,12 +3050,22 @@ async function zerarBancoDeDados() {
         snapE.docs.forEach(doc => batchE.delete(doc.ref));
         await batchE.commit();
       }
+
+      // Deleta todos os visitantes no Firestore
+      const snapV = await db.collection('visitantes').get();
+      if (!snapV.empty) {
+        const batchV = db.batch();
+        snapV.docs.forEach(doc => batchV.delete(doc.ref));
+        await batchV.commit();
+      }
     }
 
     // Limpa localmente
     membros = [];
+    visitantes = [];
     eventos = [];
     localStorage.setItem(STORAGE_MEMBROS, JSON.stringify([]));
+    localStorage.setItem(STORAGE_VISITANTES, JSON.stringify([]));
     localStorage.setItem(STORAGE_EVENTOS, JSON.stringify([]));
     atualizarTudo();
 
@@ -2694,8 +3073,10 @@ async function zerarBancoDeDados() {
   } catch (err) {
     console.error('Erro ao limpar nuvem:', err);
     membros = [];
+    visitantes = [];
     eventos = [];
     localStorage.setItem(STORAGE_MEMBROS, JSON.stringify([]));
+    localStorage.setItem(STORAGE_VISITANTES, JSON.stringify([]));
     localStorage.setItem(STORAGE_EVENTOS, JSON.stringify([]));
     atualizarTudo();
     mostrarToast('Dados locais zerados. Verifique a conexão com a nuvem.', 'info');

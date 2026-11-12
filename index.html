@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -25,7 +25,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
   <!-- Estilos customizados -->
-  <link rel="stylesheet" href="styles.css?v=4.4">
+  <link rel="stylesheet" href="styles.css?v=5.1">
 </head>
 <body class="sidebar-expanded not-authenticated">
 
@@ -119,6 +119,11 @@
           <span class="nav-label">Membros</span>
         </button>
 
+        <button class="nav-link" data-view="visitantes" id="navVisitantes">
+          <span class="nav-icon"><i class="ph-fill ph-user-focus"></i></span>
+          <span class="nav-label">Visitantes</span>
+        </button>
+
         <button class="nav-link" data-view="aniversariantes-dia" id="navNiverDia">
           <span class="nav-icon"><i class="ph-fill ph-cake"></i></span>
           <span class="nav-label">Aniversariantes do dia</span>
@@ -178,11 +183,11 @@
         </div>
 
         <div class="topbar-right">
-          <!-- Busca Rápida -->
-          <div class="quick-search-box">
+
+          <!-- Busca compacta de Membros (ao lado de Novo Membro) -->
+          <div class="quick-search-box" id="membrosSearchWrap" style="display: none; width: 225px;">
             <i class="ph-bold ph-magnifying-glass"></i>
-            <input type="text" id="quickSearchInput" placeholder="Buscar membro por nome..." autocomplete="off">
-            <div class="search-results-dropdown" id="searchResultsDropdown"></div>
+            <input type="text" id="filterSearchMembro" placeholder="Buscar membro..." autocomplete="off" spellcheck="false">
           </div>
 
           <!-- Ação Rápida: Cadastrar Membro -->
@@ -195,6 +200,18 @@
           <button class="btn btn-secondary admin-only" id="btnTopNovoEvento">
             <i class="ph-bold ph-calendar-plus"></i>
             <span>Novo Evento</span>
+          </button>
+
+          <!-- Busca compacta de Visitantes (ao lado de Novo Visitante) -->
+          <div class="quick-search-box" id="visitantesSearchWrap" style="display: none; width: 225px;">
+            <i class="ph-bold ph-magnifying-glass"></i>
+            <input type="text" id="filterSearchVisitante" placeholder="Buscar visitante..." autocomplete="off" spellcheck="false">
+          </div>
+
+          <!-- Ação Rápida: Cadastrar Visitante -->
+          <button class="btn btn-primary admin-only" id="btnTopNovoVisitante" style="display: none;">
+            <i class="ph-bold ph-user-plus"></i>
+            <span>Novo Visitante</span>
           </button>
 
           <!-- Perfil do Usuário Conectado (Avatar Redondo com Dropdown) -->
@@ -317,7 +334,8 @@
               </div>
             </div>
 
-            <!-- Coluna 2: Resumo dos Membros com Gráfico de Rosca com centro vazado -->
+            <!-- Coluna 2: Resumo dos Membros + Calendário abaixo -->
+            <div class="dashboard-col-stack">
             <div class="dash-card card-members-summary">
               <div class="dash-card-header">
                 <div class="dash-card-title">
@@ -405,24 +423,52 @@
                 </div>
               </div>
             </div>
+            </div>
+
+            <!-- Coluna 3: Últimos Visitantes -->
+            <div class="dash-card card-home-visitantes">
+              <div class="dash-card-header">
+                <div class="dash-card-title">
+                  <i class="ph-fill ph-user-focus icon-accent"></i>
+                  <h3>Últimos Visitantes</h3>
+                </div>
+                <button class="card-header-link" id="linkVerTodosVisitantes">Ver todos &rarr;</button>
+              </div>
+
+              <div class="dash-card-body">
+                <div class="birthday-items-list" id="homeVisitantesList">
+                  <!-- Preenchido via JS -->
+                </div>
+              </div>
+            </div>
 
           </div>
           <!-- 4. LINHA INFERIOR: CADASTROS RECENTES + PRÓXIMOS EVENTOS + CARD DE FÉ -->
           <div class="secondary-dashboard-grid">
             
-            <!-- Tabela dos 5 Cadastros Mais Recentes -->
-            <div class="dash-card card-recent-members">
+            <!-- Gráfico de Aniversariantes por Mês (Janeiro a Dezembro) -->
+            <div class="dash-card card-growth-chart">
               <div class="dash-card-header">
                 <div class="dash-card-title">
-                  <i class="ph-bold ph-user-plus icon-accent"></i>
-                  <h3>Cadastros recentes</h3>
+                  <i class="ph-fill ph-cake icon-accent" style="color: #ea580c;"></i>
+                  <h3 id="tituloGraficoAniversariantes">Aniversariantes por Mês</h3>
                 </div>
-                <button class="card-header-link" id="linkVerTodosRecentes">Ver todos &rarr;</button>
+                <button class="card-header-link" onclick="trocarVisualizacao('aniversariantes-mes')">Ver todos &rarr;</button>
               </div>
 
-              <div class="dash-card-body p-0">
-                <div class="recent-members-list" id="homeRecentMembersList">
-                  <!-- Itens gerados dinamicamente via JS -->
+              <div class="dash-card-body growth-chart-card-body">
+                <div class="growth-meta-bar">
+                  <div>
+                    <span class="growth-meta-label">Total no ano</span>
+                    <div class="growth-meta-value-row">
+                      <span class="growth-meta-number" id="totalAnivPeriodo">0</span>
+                      <span class="growth-meta-badge" id="badgeAnivPeriodo" style="background:#fff7ed; color:#c2410c; border:1px solid #fed7aa;">aniversariantes</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="growth-chart-canvas-wrapper">
+                  <canvas id="aniversariantesChart"></canvas>
                 </div>
               </div>
             </div>
@@ -444,37 +490,34 @@
               </div>
             </div>
 
-            <!-- Gráfico de Aniversariantes nos Últimos Meses -->
-            <div class="dash-card card-growth-chart">
+            <!-- Gráfico em Colunas: Visitantes por Mês (12 meses) -->
+            <div class="dash-card card-visitantes-chart">
               <div class="dash-card-header">
                 <div class="dash-card-title">
-                  <i class="ph-fill ph-cake icon-accent" style="color: #ea580c;"></i>
-                  <h3 id="tituloGraficoAniversariantes">Aniversariantes (3 meses)</h3>
+                  <i class="ph-fill ph-chart-bar icon-accent" style="color: #16a34a;"></i>
+                  <h3>Visitantes (<span id="labelAnoVisitantes">2026</span>)</h3>
                 </div>
-                <button type="button" class="btn-toggle-meses" id="btnAlternarMesesAniv" onclick="alternarPeriodoGraficoAniversariantes()" title="Clique para alternar períodos de meses">
-                  <i class="ph-bold ph-arrows-clockwise"></i>
-                  <span id="labelPeriodoBotaoAniv">Ver 6 meses</span>
-                </button>
+                <button class="card-header-link" id="linkVerTodosVisitantesChart">Ver todos &rarr;</button>
               </div>
 
               <div class="dash-card-body growth-chart-card-body">
                 <div class="growth-meta-bar">
                   <div>
-                    <span class="growth-meta-label">Total no período</span>
+                    <span class="growth-meta-label">Total no ano</span>
                     <div class="growth-meta-value-row">
-                      <span class="growth-meta-number" id="totalAnivPeriodo">0</span>
-                      <span class="growth-meta-badge" id="badgeAnivPeriodo" style="background:#fff7ed; color:#c2410c; border:1px solid #fed7aa;">aniversariantes</span>
+                      <span class="growth-meta-number" id="totalVisitantesAno">0</span>
+                      <span class="growth-meta-badge" style="background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0;">visitantes</span>
                     </div>
                   </div>
-                  <div class="growth-pill-selector">
-                    <button type="button" class="btn-pill-period active" data-period="3" onclick="mudarPeriodoGraficoAniversariantes(3)" title="Visualizar últimos 3 meses">3 Meses</button>
-                    <button type="button" class="btn-pill-period" data-period="6" onclick="mudarPeriodoGraficoAniversariantes(6)" title="Visualizar últimos 6 meses">6 Meses</button>
-                    <button type="button" class="btn-pill-period" data-period="12" onclick="mudarPeriodoGraficoAniversariantes(12)" title="Visualizar últimos 12 meses">12 Meses</button>
+                  <div class="chart-year-select-wrap">
+                    <select id="visitantesYearSelect" class="chart-year-select" title="Selecionar ano do gráfico">
+                      <!-- Opções de ano geradas via JS -->
+                    </select>
                   </div>
                 </div>
 
                 <div class="growth-chart-canvas-wrapper">
-                  <canvas id="aniversariantesChart"></canvas>
+                  <canvas id="visitantesMesChart"></canvas>
                 </div>
               </div>
             </div>
@@ -487,11 +530,6 @@
         <section class="view-section" id="viewMembros">
           <div class="viewer-readonly-notice"><i class="ph-bold ph-shield-check"></i><span><strong>Modo de Leitura:</strong> Acesso somente para consulta. Criação, edição e exclusão são restritas ao Administrador.</span></div>
           <div class="filters-card">
-            <div class="filter-search-input">
-              <i class="ph-bold ph-magnifying-glass"></i>
-              <input type="text" id="filterSearchMembro" placeholder="Pesquisar por nome, cargo ou telefone..." autocomplete="off" spellcheck="false">
-            </div>
-
             <div class="filter-pills-row">
               <button class="filter-pill active" data-pill-category="todos">Todos (<span id="countPillTodos">0</span>)</button>
               <button class="filter-pill" data-pill-category="Homem">Homens (<span id="countPillHomens">0</span>)</button>
@@ -694,6 +732,33 @@
           </div>
         </section>
 
+        <!-- ================= VISÃO: VISITANTES ================= -->
+        <section class="view-section" id="viewVisitantes">
+          <div class="viewer-readonly-notice"><i class="ph-bold ph-shield-check"></i><span><strong>Modo de Leitura:</strong> Acesso somente para consulta. Criação, edição e exclusão são restritas ao Administrador.</span></div>
+          <div class="filters-card">
+            <div class="filter-pills-row">
+              <span class="filter-pill active" style="cursor: default;">Visitantes (<span id="countPillVisitantes">0</span>)</span>
+            </div>
+          </div>
+
+          <div class="table-responsive-card">
+            <table class="data-table" id="tabelaVisitantes">
+              <thead>
+                <tr>
+                  <th>Visitante</th>
+                  <th class="text-center">Data da Visita</th>
+                  <th class="text-center">Telefone / WhatsApp</th>
+                  <th class="text-center">Observação</th>
+                  <th class="text-center">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyVisitantes">
+                <!-- Renderizado dinamicamente via JS -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
         <!-- ================= VISÃO: RELATÓRIOS & IMPRESSÃO ================= -->
         <section class="view-section" id="viewRelatorios">
           <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
@@ -760,6 +825,21 @@
               <div class="preview-whatsapp-bubble mt-3">
                 <span class="preview-bubble-label">Pré-visualização:</span>
                 <p id="previewWhatsappText">Carregando prévia...</p>
+              </div>
+            </div>
+
+            <div class="config-card">
+              <h4><i class="ph-fill ph-whatsapp-logo text-whatsapp"></i> Mensagem Padrão para Visitantes</h4>
+              <p class="form-help">Esta mensagem será usada no botão "Enviar WhatsApp" na aba Visitantes. Use <code>{NOME}</code> para inclusão automática.</p>
+              
+              <div class="form-group mt-3">
+                <label for="txtConfigMsgVisitante">Texto da Mensagem:</label>
+                <textarea id="txtConfigMsgVisitante" rows="6" class="form-control"></textarea>
+              </div>
+
+              <div class="preview-whatsapp-bubble mt-3">
+                <span class="preview-bubble-label">Pré-visualização:</span>
+                <p id="previewWhatsappVisitanteText">Carregando prévia...</p>
               </div>
             </div>
 
@@ -882,6 +962,58 @@
         <div class="modal-footer">
           <button type="button" class="btn btn-outline" id="btnCancelModalMembro">Cancelar</button>
           <button type="submit" class="btn btn-primary" id="btnSalvarMembro">Salvar Membro</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+  <!-- Modal: Visitante -->
+  <div class="app-modal" id="modalVisitante">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <i class="ph-bold ph-user-focus"></i>
+          <h3 id="modalVisitanteTitle">Cadastrar Novo Visitante</h3>
+        </div>
+        <button class="btn-modal-close" id="btnCloseModalVisitante"><i class="ph-bold ph-x"></i></button>
+      </div>
+      <form id="formVisitante" autocomplete="off">
+        <input type="hidden" id="visitanteId">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="visitanteNome">Nome Completo *</label>
+            <input type="text" id="visitanteNome" class="form-control" placeholder="Ex: João da Silva" required autocomplete="off" spellcheck="false" data-lpignore="true">
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label for="visitanteDataVisita">Data da Visita *</label>
+              <input type="date" id="visitanteDataVisita" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label for="visitanteTelefone">WhatsApp / Telefone</label>
+              <input type="text" id="visitanteTelefone" class="form-control" placeholder="15 99769-6207" maxlength="13" autocomplete="off" spellcheck="false">
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label for="visitanteTemWhatsapp">Possui WhatsApp? *</label>
+              <select id="visitanteTemWhatsapp" class="form-control">
+                <option value="sim">Sim, tem WhatsApp</option>
+                <option value="nao">Não tem WhatsApp</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="visitanteObservacao">Observação</label>
+              <input type="text" id="visitanteObservacao" class="form-control" placeholder="Observações (ex: convidado por..., pedido de oração...)" autocomplete="off" spellcheck="false">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" id="btnCancelModalVisitante">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btnSalvarVisitante">Salvar Visitante</button>
         </div>
       </form>
     </div>
