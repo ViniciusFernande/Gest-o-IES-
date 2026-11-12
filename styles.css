@@ -1,4 +1,4 @@
-/* ========================================================
+﻿/* ========================================================
    IGREJA EVANGÉLICA SEMENTEIRA (IES - PIEDADE)
    Painel de Gestão de Membros & Aniversariantes
    Paleta: Marrom Terra e Verde Broto / Limão Vibrante
@@ -2820,4 +2820,237 @@ body.role-viewer .viewer-readonly-notice {
 /* Esconder badges numéricos da navegação lateral */
 .nav-badge {
   display: none !important;
+}
+
+/* ==========================================================================
+   AJUSTES DE RESPONSIVIDADE MOBILE & MODO APP (iPHONE / ANDROID HOME SCREEN)
+   ========================================================================== */
+html {
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+.app-layout {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+.main-wrapper,
+.page-content,
+.view-section,
+.dash-card,
+.filters-card,
+.table-responsive-card {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.table-responsive-card {
+  -webkit-overflow-scrolling: touch;
+}
+
+.topbar-right .quick-search-box {
+  width: 225px;
+}
+
+@media (max-width: 992px) {
+  .main-wrapper {
+    width: 100% !important;
+    max-width: 100vw !important;
+  }
+
+  .app-sidebar {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+@media (max-width: 768px) {
+  .app-topbar {
+    height: auto;
+    min-height: 60px;
+    padding: calc(10px + env(safe-area-inset-top)) calc(14px + env(safe-area-inset-right)) 10px calc(14px + env(safe-area-inset-left));
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 8px;
+  }
+
+  .topbar-left {
+    flex: 1 1 100%;
+    min-width: 0;
+    gap: 10px;
+  }
+
+  .page-title-area {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .page-main-heading {
+    font-size: 16px;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .current-date-tag {
+    font-size: 11.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .topbar-right {
+    flex: 1 1 100%;
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+  }
+
+  .topbar-right .btn {
+    padding: 8px 12px;
+    font-size: 12.5px;
+    white-space: nowrap;
+  }
+
+  .topbar-right .user-profile-dropdown {
+    margin-left: auto;
+  }
+
+  .topbar-right .quick-search-box {
+    order: 10;
+    flex: 1 1 100%;
+    width: 100% !important;
+    max-width: 100%;
+  }
+
+  .page-content {
+    padding: 14px calc(14px + env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) calc(14px + env(safe-area-inset-left));
+  }
+
+  .login-screen-overlay {
+    padding: calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));
+  }
+
+  .login-card {
+    padding: 28px 20px;
+  }
+
+  /* Banner de Aniversariantes */
+  .birthday-alert-banner {
+    padding: 14px 40px 14px 14px;
+    margin-bottom: 16px;
+  }
+
+  .alert-content {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .btn-close-alert {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+  }
+
+  /* KPIs */
+  .kpi-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .kpi-card {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .kpi-icon-box {
+    width: 38px;
+    height: 38px;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .kpi-value {
+    font-size: 20px;
+  }
+
+  .kpi-label {
+    font-size: 11.5px;
+    line-height: 1.25;
+  }
+
+  /* Listas da Home */
+  .upcoming-item {
+    gap: 8px;
+  }
+
+  .upcoming-info {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .btn-send-whatsapp-pill {
+    flex-shrink: 0;
+    padding: 6px 10px;
+    font-size: 11.5px;
+  }
+
+  /* Cabeçalhos de Seção e Filtros */
+  .section-top-bar {
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .section-title {
+    font-size: 18px;
+  }
+
+  .filters-card {
+    padding: 12px 14px;
+    margin-bottom: 14px;
+  }
+
+  .filter-pill, .pill-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  /* Tabelas com rolagem horizontal suave apenas dentro do card */
+  .data-table th,
+  .data-table td {
+    padding: 10px 12px;
+    font-size: 12.5px;
+  }
+
+  /* Modais e Formulários no celular */
+  .modal-overlay {
+    padding: calc(12px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom));
+  }
+
+  .modal-dialog {
+    width: 100%;
+    max-height: 90dvh;
+  }
+
+  .form-row-2 {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  /* Evita zoom automático no iPhone ao tocar em inputs */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .kpi-cards-grid {
+    grid-template-columns: 1fr;
+  }
 }
