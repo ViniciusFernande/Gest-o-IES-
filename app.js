@@ -2570,7 +2570,7 @@ function gerarRelatorioVisitantes() {
   `;
 }
 
-function imprimirRelatorioAtual() {
+async function imprimirRelatorioAtual() {
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
   const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth <= 768;
 
@@ -2579,70 +2579,148 @@ function imprimirRelatorioAtual() {
     return;
   }
 
-  const sheet = document.getElementById('printSheet');
-  if (!sheet) {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
     window.print();
     return;
   }
 
-  const clone = sheet.cloneNode(true);
-  clone.querySelectorAll('.no-print').forEach(el => el.remove());
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
 
-  const logoUrl = new URL('logo.png', window.location.href).href;
-  clone.querySelectorAll('img.print-sheet-logo').forEach(img => {
-    img.src = logoUrl;
-  });
+    const titulo = document.getElementById('printSheetTitle')?.textContent?.trim() || 'Relatório IES';
+    const dataEmissao = document.getElementById('printSheetDate')?.textContent?.trim() || `Emitido em ${new Date().toLocaleDateString('pt-BR')}`;
 
-  const titulo = document.getElementById('printSheetTitle')?.textContent || 'Relatório IES';
-  const printWin = window.open('', '_blank');
-  if (!printWin) {
-    window.print();
-    return;
-  }
-
-  printWin.document.open();
-  printWin.document.write(`<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${titulo}</title>
-  <style>
-    * { box-sizing: border-box; }
-    body { margin: 0; padding: 20px; font-family: 'Segoe UI', Arial, sans-serif; color: #1e293b; background: #ffffff; }
-    .mobile-print-bar { display: flex; gap: 10px; justify-content: flex-end; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #e2e8f0; }
-    .mobile-print-btn { background: #1f3711; color: #ffffff; border: none; border-radius: 999px; padding: 10px 18px; font-size: 14px; font-weight: 600; cursor: pointer; }
-    .mobile-close-btn { background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; border-radius: 999px; padding: 10px 16px; font-size: 14px; font-weight: 600; cursor: pointer; }
-    .print-sheet-header { display: flex; align-items: center; gap: 16px; padding-bottom: 16px; border-bottom: 2px solid #1f3711; margin-bottom: 16px; }
-    .print-sheet-logo { width: 56px; height: 56px; object-fit: contain; border-radius: 8px; }
-    .print-sheet-header h2 { margin: 0 0 4px 0; font-size: 18px; color: #1f3711; }
-    .print-sheet-header h3 { margin: 0 0 2px 0; font-size: 14px; color: #334155; }
-    .print-sheet-header small { font-size: 12px; color: #64748b; }
-    .print-sheet-content { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th, td { text-align: left; }
-    @media print {
-      body { padding: 0; }
-      .mobile-print-bar { display: none !important; }
+    let startX = 14;
+    try {
+      const logoImg = document.querySelector('#printSheet .print-sheet-logo');
+      if (logoImg && logoImg.complete && logoImg.naturalWidth > 0) {
+        const canvas = document.createElement('canvas');
+        canvas.width = logoImg.naturalWidth;
+        canvas.height = logoImg.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(logoImg, 0, 0);
+        const logoDataUrl = canvas.toDataURL('image/png');
+        doc.addImage(logoDataUrl, 'PNG', 14, 12, 16, 16);
+        startX = 34;
+      }
+    } catch (e) {
+      // Ignora erro de logo se houver restrição de canvas
     }
-  </style>
-</head>
-<body>
-  <div class="mobile-print-bar">
-    <button class="mobile-print-btn" onclick="window.print()">Imprimir / Salvar PDF</button>
-    <button class="mobile-close-btn" onclick="window.close()">Fechar</button>
-  </div>
-  ${clone.innerHTML}
-  <script>
-    window.onload = function() {
-      setTimeout(function() { window.print(); }, 350);
-    };
-  <\/script>
-</body>
-</html>`);
-  printWin.document.close();
-}
 
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(31, 55, 17);
+    doc.text('Igreja Evangélica Sementeira - Piedade', startX, 17);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(51, 65, 85);
+    doc.text(titulo, startX, 23);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(100, 116, 139);
+    doc.text(dataEmissao, startX, 28);
+
+    doc.setDrawColor(31, 55, 17);
+    doc.setLineWidth(0.6);
+    doc.line(14, 32, pageWidth - 14, 32);
+
+    const tabela = document.querySelector('#printSheetContent table');
+    let finalY = 38;
+
+    if (tabela && typeof doc.autoTable === 'function') {
+      doc.autoTable({
+        html: tabela,
+        startY: 36,
+        margin: { left: 14, right: 14, bottom: 18 },
+        theme: 'grid',
+        styles: {
+          font: 'helvetica',
+          fontSize: 8.5,
+          cellPadding: 3,
+          textColor: [30, 41, 59],
+          lineColor: [213, 222, 201],
+          lineWidth: 0.2
+        },
+        headStyles: {
+          fillColor: [234, 242, 225],
+          textColor: [31, 55, 17],
+          fontStyle: 'bold'
+        },
+        alternateRowStyles: {
+          fillColor: [250, 252, 248]
+        }
+      });
+      finalY = (doc.lastAutoTable?.finalY || 38) + 8;
+    } else {
+      const textoVazio = document.querySelector('#printSheetContent p')?.textContent?.trim() || 'Nenhum registro encontrado.';
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10.5);
+      doc.setTextColor(100, 116, 139);
+      doc.text(textoVazio, 14, 44);
+      finalY = 54;
+    }
+
+    const totalEl = document.querySelector('#printSheetContent > div:last-child span:first-child');
+    if (totalEl && totalEl.textContent) {
+      if (finalY > doc.internal.pageSize.getHeight() - 20) {
+        doc.addPage();
+        finalY = 20;
+      }
+      doc.setFillColor(246, 250, 241);
+      doc.rect(14, finalY - 4, pageWidth - 28, 10, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.5);
+      doc.setTextColor(31, 55, 17);
+      doc.text(totalEl.textContent.trim(), 17, finalY + 2.5);
+    }
+
+    const totalPages = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(148, 163, 184);
+      doc.text(`Página ${i} de ${totalPages}`, pageWidth - 14, doc.internal.pageSize.getHeight() - 8, { align: 'right' });
+    }
+
+    const slug = titulo
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+    const fileName = `${slug || 'relatorio-ies'}.pdf`;
+    const pdfBlob = doc.output('blob');
+
+    if (navigator.share && navigator.canShare) {
+      const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+      if (navigator.canShare({ files: [pdfFile] })) {
+        try {
+          await navigator.share({
+            files: [pdfFile],
+            title: titulo
+          });
+          return;
+        } catch (shareErr) {
+          if (shareErr && shareErr.name === 'AbortError') return;
+        }
+      }
+    }
+
+    doc.save(fileName);
+    if (typeof mostrarToast === 'function') {
+      mostrarToast('PDF gerado e salvo com sucesso!', 'success');
+    }
+  } catch (err) {
+    console.error('Erro ao gerar PDF no celular:', err);
+    if (typeof mostrarToast === 'function') {
+      mostrarToast('Erro ao gerar o PDF. Tente novamente.', 'error');
+    }
+  }
+}
 function imprimirListaDoMesSelecionado() {
   const mesIndex = selectedAnivMonth;
   const viewOrigem = currentView;
