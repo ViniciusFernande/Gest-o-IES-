@@ -1250,9 +1250,47 @@ function renderizarTabelaMembros() {
 function renderizarTabelaVisitantes() {
   const tbody = document.getElementById('tbodyVisitantes');
   const busca = (document.getElementById('filterSearchVisitante')?.value || '').toLowerCase();
+  const selMes = document.getElementById('filterVisitantesMes');
+  const selAno = document.getElementById('filterVisitantesAno');
+  const btnLimpar = document.getElementById('btnLimparFiltroVisitantes');
   if (!tbody) return;
 
+  // Atualiza opções de anos dinamicamente a partir de 2026 mantendo a seleção atual
+  if (selAno) {
+    const anoSelecionado = selAno.value || 'todos';
+    const anoAtual = new Date().getFullYear();
+    const anosSet = new Set();
+    for (let y = 2026; y <= Math.max(2026, anoAtual); y++) anosSet.add(y);
+    visitantes.forEach(v => {
+      if (v.dataVisita && /^\d{4}-/.test(v.dataVisita)) {
+        const a = parseInt(v.dataVisita.slice(0, 4), 10);
+        if (a >= 2026) anosSet.add(a);
+      }
+    });
+    const anosOrdenados = Array.from(anosSet).sort((a, b) => a - b);
+    selAno.innerHTML = `<option value="todos">Todos os anos</option>` +
+      anosOrdenados.map(a => `<option value="${a}">${a}</option>`).join('');
+    selAno.value = (anoSelecionado !== 'todos' && anosSet.has(parseInt(anoSelecionado, 10))) ? anoSelecionado : 'todos';
+  }
+
+  const mesFiltro = selMes ? selMes.value : 'todos';
+  const anoFiltro = selAno ? selAno.value : 'todos';
+
+  if (btnLimpar) {
+    btnLimpar.style.display = (mesFiltro !== 'todos' || anoFiltro !== 'todos') ? 'inline-flex' : 'none';
+  }
+
   const filtrados = visitantes.filter(v => {
+    if (mesFiltro !== 'todos' || anoFiltro !== 'todos') {
+      if (!v.dataVisita) return false;
+      const parts = v.dataVisita.split('-');
+      if (parts.length !== 3) return false;
+      const ano = parts[0];
+      const mesIdx = String(parseInt(parts[1], 10) - 1);
+      if (anoFiltro !== 'todos' && ano !== anoFiltro) return false;
+      if (mesFiltro !== 'todos' && mesIdx !== mesFiltro) return false;
+    }
+
     if (!busca) return true;
     const matchNome = (v.nome || '').toLowerCase().includes(busca);
     const matchObs = (v.observacao || '').toLowerCase().includes(busca);
@@ -1261,7 +1299,7 @@ function renderizarTabelaVisitantes() {
   });
 
   const elCount = document.getElementById('countPillVisitantes');
-  if (elCount) elCount.textContent = visitantes.length;
+  if (elCount) elCount.textContent = filtrados.length;
 
   filtrados.sort((a, b) => {
     const da = a.dataVisita || '';
@@ -1475,13 +1513,12 @@ function abrirWhatsappVisitante(id) {
 
 // ================= ANIVERSARIANTES DO MÊS =================
 function renderizarTabelaAniversariantesMes() {
-  const containerBtns = document.getElementById('monthSelectorButtons');
-  if (containerBtns && containerBtns.children.length === 0) {
-    containerBtns.innerHTML = NOMES_MESES.map((nome, idx) => `
-      <button class="month-btn-pill ${idx === selectedAnivMonth ? 'active' : ''}" onclick="selecionarMesAniversariante(${idx})">
-        ${nome}
-      </button>
-    `).join('');
+  const selMes = document.getElementById('selectMesAniversariantes');
+  if (selMes) {
+    if (selMes.options.length === 0) {
+      selMes.innerHTML = NOMES_MESES.map((nome, idx) => `<option value="${idx}">${nome}</option>`).join('');
+    }
+    selMes.value = String(selectedAnivMonth);
   }
 
   document.getElementById('labelAniversariantesMesTitulo').textContent = `Aniversariantes de ${NOMES_MESES[selectedAnivMonth]}`;
@@ -1538,10 +1575,11 @@ function renderizarTabelaAniversariantesMes() {
 }
 
 function selecionarMesAniversariante(idx) {
-  selectedAnivMonth = idx;
-  document.querySelectorAll('.month-btn-pill').forEach((btn, i) => {
-    btn.classList.toggle('active', i === idx);
-  });
+  const mesNum = Number.isInteger(idx) ? idx : parseInt(idx, 10);
+  if (Number.isNaN(mesNum) || mesNum < 0 || mesNum > 11) return;
+  selectedAnivMonth = mesNum;
+  const selMes = document.getElementById('selectMesAniversariantes');
+  if (selMes) selMes.value = String(mesNum);
   renderizarTabelaAniversariantesMes();
 }
 
@@ -2156,31 +2194,68 @@ function restaurarBackup(file) {
 // ================= RELATÓRIOS PARA IMPRESSÃO =================
 let relatorioAtualTipo = 'aniversariantes';
 
+let relatorioAnivMes = String(selectedAnivMonth);
+let relatorioVisitantesMes = 'todos';
+let relatorioVisitantesAno = 'todos';
+
 function selecionarRelatorio(tipo, mesParam = null) {
   relatorioAtualTipo = tipo;
 
   const boxAniv = document.getElementById('btnReportAniversariantes');
   const boxMembros = document.getElementById('btnReportGeralMembros');
   const boxEventos = document.getElementById('btnReportEventos');
+  const boxVisitantes = document.getElementById('btnReportVisitantes');
 
   if (boxAniv) boxAniv.classList.toggle('active', tipo === 'aniversariantes');
   if (boxMembros) boxMembros.classList.toggle('active', tipo === 'membros');
   if (boxEventos) boxEventos.classList.toggle('active', tipo === 'eventos');
+  if (boxVisitantes) boxVisitantes.classList.toggle('active', tipo === 'visitantes');
 
   if (tipo === 'aniversariantes') {
-    gerarRelatorioBoletim(mesParam !== null ? mesParam : selectedAnivMonth);
+    if (mesParam !== null && mesParam !== undefined) {
+      relatorioAnivMes = String(mesParam);
+    }
+    gerarRelatorioBoletim(relatorioAnivMes);
   } else if (tipo === 'membros') {
     gerarRelatorioGeralMembros();
   } else if (tipo === 'eventos') {
     gerarRelatorioEventos();
+  } else if (tipo === 'visitantes') {
+    gerarRelatorioVisitantes();
   }
 }
 
+function mudarFiltroRelatorioAniv() {
+  const sel = document.getElementById('relatorioAnivFiltroMes');
+  if (!sel) return;
+  relatorioAnivMes = sel.value || 'todos';
+  gerarRelatorioBoletim(relatorioAnivMes);
+}
+
 function gerarRelatorioBoletim(mesIndex = null) {
-  const mes = (mesIndex !== null && mesIndex !== undefined) ? mesIndex : selectedAnivMonth;
-  const mesNome = NOMES_MESES[mes] || NOMES_MESES[new Date().getMonth()];
-  const ativos = membros.filter(m => m.status === 'ativo' && isAniversarioMes(m.nascimento, mes));
-  ativos.sort((a,b) => parseInt(a.nascimento.split('-')[2], 10) - parseInt(b.nascimento.split('-')[2], 10));
+  const filtro = (mesIndex !== null && mesIndex !== undefined) ? String(mesIndex) : relatorioAnivMes;
+  relatorioAnivMes = filtro;
+  const isAnoTodo = filtro === 'todos';
+  const mesNum = isAnoTodo ? null : parseInt(filtro, 10);
+  const mesNome = !isAnoTodo ? (NOMES_MESES[mesNum] || NOMES_MESES[new Date().getMonth()]) : 'Ano Todo';
+
+  const ativos = membros.filter(m => {
+    if (m.status !== 'ativo' || !m.nascimento) return false;
+    if (isAnoTodo) return /^\d{4}-\d{2}-\d{2}/.test(m.nascimento);
+    return isAniversarioMes(m.nascimento, mesNum);
+  });
+
+  ativos.sort((a, b) => {
+    const partsA = a.nascimento.split('-');
+    const partsB = b.nascimento.split('-');
+    const mesA = parseInt(partsA[1], 10);
+    const mesB = parseInt(partsB[1], 10);
+    if (mesA !== mesB) return mesA - mesB;
+    const diaA = parseInt(partsA[2], 10);
+    const diaB = parseInt(partsB[2], 10);
+    if (diaA !== diaB) return diaA - diaB;
+    return (a.nome || '').localeCompare(b.nome || '', 'pt-BR', { sensitivity: 'base' });
+  });
 
   const elTitle = document.getElementById('printSheetTitle');
   const elDate = document.getElementById('printSheetDate');
@@ -2191,21 +2266,31 @@ function gerarRelatorioBoletim(mesIndex = null) {
 
   if (!content) return;
 
+  const barraFiltrosHtml = `
+    <div class="no-print" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:14px; padding:10px 14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px;">
+      <span style="font-size:12.5px; font-weight:700; color:#334155;">Filtrar período:</span>
+      <select id="relatorioAnivFiltroMes" class="chart-year-select" onchange="mudarFiltroRelatorioAniv()">
+        <option value="todos" ${isAnoTodo ? 'selected' : ''}>Ano todo (Todos os meses)</option>
+        ${NOMES_MESES.map((m, idx) => `<option value="${idx}" ${!isAnoTodo && mesNum === idx ? 'selected' : ''}>${m}</option>`).join('')}
+      </select>
+    </div>
+  `;
+
   if (ativos.length === 0) {
-    content.innerHTML = `
+    content.innerHTML = barraFiltrosHtml + `
       <div style="padding: 36px 20px; text-align: center; color: var(--text-muted);">
         <i class="ph-fill ph-cake" style="font-size: 42px; margin-bottom: 12px; display: inline-block; color: var(--sprout-700);"></i>
-        <p style="font-size: 15px; margin: 0; font-weight: 500;">Nenhum aniversariante encontrado para o mês de ${mesNome}.</p>
+        <p style="font-size: 15px; margin: 0; font-weight: 500;">${isAnoTodo ? 'Nenhum aniversariante encontrado.' : `Nenhum aniversariante encontrado para o mês de ${mesNome}.`}</p>
       </div>
     `;
     return;
   }
 
-  content.innerHTML = `
+  content.innerHTML = barraFiltrosHtml + `
     <table class="data-table" style="width:100%; border:1px solid #d5dec9; margin-top:16px;">
       <thead>
         <tr style="background:#eaf2e1;">
-          <th style="padding:10px 14px; width:70px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Dia</th>
+          <th style="padding:10px 14px; width:${isAnoTodo ? '110px' : '70px'}; border-bottom:2px solid #b8cb9f; color:#1f3711;">${isAnoTodo ? 'Data' : 'Dia'}</th>
           <th style="padding:10px 14px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Nome do Membro</th>
           <th style="padding:10px 14px; width:90px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Idade</th>
           <th style="padding:10px 14px; width:150px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Telefone / WhatsApp</th>
@@ -2214,11 +2299,14 @@ function gerarRelatorioBoletim(mesIndex = null) {
       </thead>
       <tbody>
         ${ativos.map(m => {
-          const dia = m.nascimento ? m.nascimento.split('-')[2] : '-';
+          const parts = m.nascimento ? m.nascimento.split('-') : [];
+          const dia = parts[2] || '-';
+          const mesCol = parts[1] ? (NOMES_MESES[parseInt(parts[1], 10) - 1] || '').slice(0, 3) : '';
+          const dataLabel = isAnoTodo ? `${dia}/${parts[1] || '--'} (${mesCol})` : `Dia ${dia}`;
           const idade = calcularIdade(m.nascimento);
           return `
             <tr>
-              <td style="padding:10px 14px; border-top:1px solid #e2ebd8;"><strong>Dia ${dia}</strong></td>
+              <td style="padding:10px 14px; border-top:1px solid #e2ebd8;"><strong>${dataLabel}</strong></td>
               <td style="padding:10px 14px; border-top:1px solid #e2ebd8; font-weight:600;">${m.nome}</td>
               <td style="padding:10px 14px; border-top:1px solid #e2ebd8; color:#2b4c16; font-weight:600;">${idade !== '' ? idade + ' anos' : '-'}</td>
               <td style="padding:10px 14px; border-top:1px solid #e2ebd8;">${m.telefone || '-'}</td>
@@ -2229,7 +2317,7 @@ function gerarRelatorioBoletim(mesIndex = null) {
       </tbody>
     </table>
     <div style="margin-top: 20px; padding: 12px 18px; background: #f6faf1; border-radius: 8px; border-left: 4px solid #6fa807; display: flex; justify-content: space-between; align-items: center; font-size: 13.5px;">
-      <span><strong>Total no mês:</strong> ${ativos.length} aniversariante(s)</span>
+      <span><strong>${isAnoTodo ? 'Total no ano:' : 'Total no mês:'}</strong> ${ativos.length} aniversariante(s)</span>
       <span style="color: var(--text-muted);">Igreja Evangélica Sementeira - Piedade</span>
     </div>
   `;
@@ -2369,6 +2457,119 @@ function gerarRelatorioEventos() {
 }
 
 // Imprime a lista do mês selecionado na aba Aniversariantes do Mês
+function mudarFiltroRelatorioVisitantes() {
+  const selMes = document.getElementById('relatorioVisitantesMes');
+  const selAno = document.getElementById('relatorioVisitantesAno');
+  relatorioVisitantesMes = selMes ? selMes.value : 'todos';
+  relatorioVisitantesAno = selAno ? selAno.value : 'todos';
+  gerarRelatorioVisitantes();
+}
+
+function gerarRelatorioVisitantes() {
+  const elTitle = document.getElementById('printSheetTitle');
+  const elDate = document.getElementById('printSheetDate');
+  const content = document.getElementById('printSheetContent');
+
+  let subtitulo = 'Todos os períodos';
+  if (relatorioVisitantesMes !== 'todos' && relatorioVisitantesAno !== 'todos') {
+    subtitulo = `${NOMES_MESES[parseInt(relatorioVisitantesMes, 10)]} de ${relatorioVisitantesAno}`;
+  } else if (relatorioVisitantesMes !== 'todos') {
+    subtitulo = `Mês de ${NOMES_MESES[parseInt(relatorioVisitantesMes, 10)]}`;
+  } else if (relatorioVisitantesAno !== 'todos') {
+    subtitulo = `Ano de ${relatorioVisitantesAno}`;
+  }
+
+  if (elTitle) elTitle.textContent = `Relatório de Visitantes (${subtitulo})`;
+  if (elDate) elDate.textContent = `Emitido em ${new Date().toLocaleDateString('pt-BR')}`;
+  if (!content) return;
+
+  const anoAtual = new Date().getFullYear();
+  const anosSet = new Set();
+  for (let y = 2025; y <= anoAtual; y++) anosSet.add(y);
+  visitantes.forEach(v => {
+    if (v.dataVisita && /^\d{4}-/.test(v.dataVisita)) {
+      const a = parseInt(v.dataVisita.slice(0, 4), 10);
+      if (a >= 2025) anosSet.add(a);
+    }
+  });
+  const anosOrdenados = Array.from(anosSet).sort((a, b) => a - b);
+
+  const filtrados = visitantes.filter(v => {
+    if (!v.dataVisita) return relatorioVisitantesMes === 'todos' && relatorioVisitantesAno === 'todos';
+    const parts = v.dataVisita.split('-');
+    if (parts.length !== 3) return false;
+    const ano = parts[0];
+    const mesIdx = String(parseInt(parts[1], 10) - 1);
+    if (relatorioVisitantesAno !== 'todos' && ano !== relatorioVisitantesAno) return false;
+    if (relatorioVisitantesMes !== 'todos' && mesIdx !== relatorioVisitantesMes) return false;
+    return true;
+  });
+
+  filtrados.sort((a, b) => {
+    const da = a.dataVisita || '';
+    const dbDate = b.dataVisita || '';
+    if (da !== dbDate) return dbDate.localeCompare(da);
+    return (a.nome || '').trim().localeCompare((b.nome || '').trim(), 'pt-BR', { sensitivity: 'base' });
+  });
+
+  const barraFiltrosHtml = `
+    <div class="no-print" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:14px; padding:10px 14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px;">
+      <span style="font-size:12.5px; font-weight:700; color:#334155;">Filtrar período:</span>
+      <select id="relatorioVisitantesMes" class="chart-year-select" onchange="mudarFiltroRelatorioVisitantes()">
+        <option value="todos" ${relatorioVisitantesMes === 'todos' ? 'selected' : ''}>Todos os meses</option>
+        ${NOMES_MESES.map((m, idx) => `<option value="${idx}" ${relatorioVisitantesMes === String(idx) ? 'selected' : ''}>${m}</option>`).join('')}
+      </select>
+      <select id="relatorioVisitantesAno" class="chart-year-select" onchange="mudarFiltroRelatorioVisitantes()">
+        <option value="todos" ${relatorioVisitantesAno === 'todos' ? 'selected' : ''}>Todos os anos</option>
+        ${anosOrdenados.map(a => `<option value="${a}" ${relatorioVisitantesAno === String(a) ? 'selected' : ''}>${a}</option>`).join('')}
+      </select>
+    </div>
+  `;
+
+  if (filtrados.length === 0) {
+    content.innerHTML = barraFiltrosHtml + `
+      <div style="padding: 36px 20px; text-align: center; color: var(--text-muted);">
+        <i class="ph-fill ph-user-focus" style="font-size: 42px; margin-bottom: 12px; display: inline-block; color: var(--sprout-700);"></i>
+        <p style="font-size: 15px; margin: 0; font-weight: 500;">Nenhum visitante encontrado para o período selecionado.</p>
+      </div>
+    `;
+    return;
+  }
+
+  content.innerHTML = barraFiltrosHtml + `
+    <table class="data-table" style="width:100%; border:1px solid #d5dec9; margin-top:16px;">
+      <thead>
+        <tr style="background:#eaf2e1;">
+          <th style="padding:10px 14px; width:115px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Data da Visita</th>
+          <th style="padding:10px 14px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Nome do Visitante</th>
+          <th style="padding:10px 14px; width:150px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Telefone / WhatsApp</th>
+          <th style="padding:10px 14px; width:110px; border-bottom:2px solid #b8cb9f; color:#1f3711;">WhatsApp</th>
+          <th style="padding:10px 14px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Observação</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${filtrados.map(v => {
+          const parts = v.dataVisita ? v.dataVisita.split('-') : ['', '', ''];
+          const dataFmt = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : '-';
+          const temWapp = (v.temWhatsapp !== false && v.temWhatsapp !== 'nao') ? 'Sim' : 'Não';
+          return `
+            <tr>
+              <td style="padding:10px 14px; border-top:1px solid #e2ebd8;"><strong>${dataFmt}</strong></td>
+              <td style="padding:10px 14px; border-top:1px solid #e2ebd8; font-weight:600;">${v.nome}</td>
+              <td style="padding:10px 14px; border-top:1px solid #e2ebd8;">${v.telefone ? formatarTelefone(v.telefone) : '-'}</td>
+              <td style="padding:10px 14px; border-top:1px solid #e2ebd8;">${temWapp}</td>
+              <td style="padding:10px 14px; border-top:1px solid #e2ebd8;">${v.observacao || '-'}</td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+    <div style="margin-top:14px; text-align:right; font-size:13px; font-weight:700; color:#2b4c16;">
+      Total de visitantes listados: ${filtrados.length}
+    </div>
+  `;
+}
+
 function imprimirListaDoMesSelecionado() {
   const mesIndex = selectedAnivMonth;
   const viewOrigem = currentView;
@@ -2507,6 +2708,15 @@ function inicializarAppCompleta() {
 
   document.getElementById('filterSearchMembro')?.addEventListener('input', renderizarTabelaMembros);
   document.getElementById('filterSearchVisitante')?.addEventListener('input', renderizarTabelaVisitantes);
+  document.getElementById('filterVisitantesMes')?.addEventListener('change', renderizarTabelaVisitantes);
+  document.getElementById('filterVisitantesAno')?.addEventListener('change', renderizarTabelaVisitantes);
+  document.getElementById('btnLimparFiltroVisitantes')?.addEventListener('click', () => {
+    const selMes = document.getElementById('filterVisitantesMes');
+    const selAno = document.getElementById('filterVisitantesAno');
+    if (selMes) selMes.value = 'todos';
+    if (selAno) selAno.value = 'todos';
+    renderizarTabelaVisitantes();
+  });
 
   // Controles do Calendário
   document.getElementById('btnCalPrev')?.addEventListener('click', () => {

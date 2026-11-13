@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -595,19 +595,14 @@
 
         <!-- ================= VISÃO: ANIVERSARIANTES DO MÊS ================= -->
         <section class="view-section" id="viewAniversariantesMes">
-          <div class="month-selector-wrapper" style="margin-bottom: 20px;">
-            <div class="month-selector-buttons" id="monthSelectorButtons">
-              <!-- Botões dos 12 meses gerados via JS -->
-            </div>
-          </div>
-
           <div class="table-responsive-card">
-            <div class="card-internal-header">
+            <div class="card-internal-header" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
               <h4 id="labelAniversariantesMesTitulo">Aniversariantes de Setembro</h4>
-              <button class="btn btn-outline-success" id="btnImprimirBoletimMes" onclick="imprimirListaDoMesSelecionado()">
-                <i class="ph-bold ph-printer"></i>
-                <span>Imprimir Lista do Mês</span>
-              </button>
+              <div class="month-selector-wrapper" style="display: flex; align-items: center; margin: 0;">
+                <select id="selectMesAniversariantes" class="chart-year-select" title="Selecionar Mês" onchange="selecionarMesAniversariante(parseInt(this.value, 10))">
+                  <!-- Opções dos 12 meses preenchidas via JS -->
+                </select>
+              </div>
             </div>
             <table class="data-table">
               <thead>
@@ -742,8 +737,33 @@
         <section class="view-section" id="viewVisitantes">
           <div class="viewer-readonly-notice"><i class="ph-bold ph-shield-check"></i><span><strong>Modo de Leitura:</strong> Acesso somente para consulta. Criação, edição e exclusão são restritas ao Administrador.</span></div>
           <div class="filters-card">
-            <div class="filter-pills-row">
+            <div class="filter-pills-row" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
               <span class="filter-pill active" style="cursor: default;">Visitantes (<span id="countPillVisitantes">0</span>)</span>
+
+              <select id="filterVisitantesMes" class="chart-year-select" title="Filtrar por Mês">
+                <option value="todos">Todos os meses</option>
+                <option value="0">Janeiro</option>
+                <option value="1">Fevereiro</option>
+                <option value="2">Março</option>
+                <option value="3">Abril</option>
+                <option value="4">Maio</option>
+                <option value="5">Junho</option>
+                <option value="6">Julho</option>
+                <option value="7">Agosto</option>
+                <option value="8">Setembro</option>
+                <option value="9">Outubro</option>
+                <option value="10">Novembro</option>
+                <option value="11">Dezembro</option>
+              </select>
+
+              <select id="filterVisitantesAno" class="chart-year-select" title="Filtrar por Ano">
+                <option value="todos">Todos os anos</option>
+              </select>
+
+              <button type="button" class="btn btn-outline" id="btnLimparFiltroVisitantes" style="display: none; padding: 5px 12px; font-size: 12px; border-radius: 999px;" title="Limpar filtro de mês e ano">
+                <i class="ph-bold ph-x"></i>
+                <span>Limpar</span>
+              </button>
             </div>
           </div>
 
@@ -778,12 +798,17 @@
             <div class="report-box clickable-report active" id="btnReportAniversariantes" onclick="selecionarRelatorio('aniversariantes')">
               <i class="ph-fill ph-cake"></i>
               <h4>Boletim de Aniversariantes</h4>
-              <p>Lista formatada de todos os aniversariantes do mês atual.</p>
+              <p>Lista formatada dos aniversariantes do ano todo ou de um mês específico.</p>
             </div>
             <div class="report-box clickable-report" id="btnReportGeralMembros" onclick="selecionarRelatorio('membros')">
               <i class="ph-fill ph-users-four"></i>
               <h4>Relação Geral de Membros</h4>
               <p>Lista em ordem alfabética com contatos e categorias.</p>
+            </div>
+            <div class="report-box clickable-report" id="btnReportVisitantes" onclick="selecionarRelatorio('visitantes')">
+              <i class="ph-fill ph-user-focus"></i>
+              <h4>Relatório de Visitantes</h4>
+              <p>Lista de visitantes com data da visita, contato e observação.</p>
             </div>
             <div class="report-box clickable-report" id="btnReportEventos" onclick="selecionarRelatorio('eventos')">
               <i class="ph-fill ph-calendar-blank"></i>

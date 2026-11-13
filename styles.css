@@ -1,4 +1,4 @@
-﻿/* ========================================================
+/* ========================================================
    IGREJA EVANGÉLICA SEMENTEIRA (IES - PIEDADE)
    Painel de Gestão de Membros & Aniversariantes
    Paleta: Marrom Terra e Verde Broto / Limão Vibrante
@@ -1832,8 +1832,8 @@ body.sidebar-collapsed .main-wrapper {
 /* Relatórios & Impressão */
 .reports-options-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
   margin-bottom: 24px;
 }
 
@@ -2039,20 +2039,28 @@ body.sidebar-collapsed .main-wrapper {
 
 /* Estilos de Impressão */
 @media print {
-  body {
-    background: #ffffff;
+  html, body {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    background: #ffffff !important;
   }
-  .app-sidebar, .app-topbar, .action-buttons-group, .reports-options-grid, .btn, .btn-send-whatsapp-pill, .month-selector-wrapper {
-    display: none !important;
-  }
-  .main-wrapper {
+  .app-layout, .main-wrapper, .page-content, .view-section.active, .printable-sheet, .print-sheet-content {
+    display: block !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
     margin: 0 !important;
+    padding: 0 !important;
     width: 100% !important;
   }
+  .app-sidebar, .app-topbar, .action-buttons-group, .reports-options-grid, .btn, .btn-send-whatsapp-pill, .month-selector-wrapper, .no-print {
+    display: none !important;
+  }
   .printable-sheet {
-    border: none;
-    box-shadow: none;
-    padding: 0;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
   }
 }
 
