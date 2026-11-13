@@ -2293,7 +2293,7 @@ function gerarRelatorioBoletim(mesIndex = null) {
           <th style="padding:10px 14px; width:${isAnoTodo ? '110px' : '70px'}; border-bottom:2px solid #b8cb9f; color:#1f3711;">${isAnoTodo ? 'Data' : 'Dia'}</th>
           <th style="padding:10px 14px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Nome do Membro</th>
           <th style="padding:10px 14px; width:90px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Idade</th>
-          <th style="padding:10px 14px; width:150px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Telefone / WhatsApp</th>
+          <th style="padding:10px 14px; width:150px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Telefone</th>
           <th style="padding:10px 14px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Observação</th>
         </tr>
       </thead>
@@ -2358,7 +2358,7 @@ function gerarRelatorioGeralMembros() {
           <th style="padding:10px 14px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Nome do Membro</th>
           <th style="padding:10px 14px; width:80px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Idade</th>
           <th style="padding:10px 14px; width:100px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Nascimento</th>
-          <th style="padding:10px 14px; width:140px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Telefone / WhatsApp</th>
+          <th style="padding:10px 14px; width:140px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Telefone</th>
           <th style="padding:10px 14px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Observação</th>
         </tr>
       </thead>
@@ -2542,7 +2542,7 @@ function gerarRelatorioVisitantes() {
         <tr style="background:#eaf2e1;">
           <th style="padding:10px 14px; width:115px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Data da Visita</th>
           <th style="padding:10px 14px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Nome do Visitante</th>
-          <th style="padding:10px 14px; width:150px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Telefone / WhatsApp</th>
+          <th style="padding:10px 14px; width:150px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Telefone</th>
           <th style="padding:10px 14px; width:110px; border-bottom:2px solid #b8cb9f; color:#1f3711;">WhatsApp</th>
           <th style="padding:10px 14px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Observação</th>
         </tr>
@@ -2568,6 +2568,79 @@ function gerarRelatorioVisitantes() {
       Total de visitantes listados: ${filtrados.length}
     </div>
   `;
+}
+
+function imprimirRelatorioAtual() {
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth <= 768;
+
+  if (!isMobile && !isStandalone) {
+    window.print();
+    return;
+  }
+
+  const sheet = document.getElementById('printSheet');
+  if (!sheet) {
+    window.print();
+    return;
+  }
+
+  const clone = sheet.cloneNode(true);
+  clone.querySelectorAll('.no-print').forEach(el => el.remove());
+
+  const logoUrl = new URL('logo.png', window.location.href).href;
+  clone.querySelectorAll('img.print-sheet-logo').forEach(img => {
+    img.src = logoUrl;
+  });
+
+  const titulo = document.getElementById('printSheetTitle')?.textContent || 'Relatório IES';
+  const printWin = window.open('', '_blank');
+  if (!printWin) {
+    window.print();
+    return;
+  }
+
+  printWin.document.open();
+  printWin.document.write(`<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${titulo}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 20px; font-family: 'Segoe UI', Arial, sans-serif; color: #1e293b; background: #ffffff; }
+    .mobile-print-bar { display: flex; gap: 10px; justify-content: flex-end; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #e2e8f0; }
+    .mobile-print-btn { background: #1f3711; color: #ffffff; border: none; border-radius: 999px; padding: 10px 18px; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .mobile-close-btn { background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; border-radius: 999px; padding: 10px 16px; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .print-sheet-header { display: flex; align-items: center; gap: 16px; padding-bottom: 16px; border-bottom: 2px solid #1f3711; margin-bottom: 16px; }
+    .print-sheet-logo { width: 56px; height: 56px; object-fit: contain; border-radius: 8px; }
+    .print-sheet-header h2 { margin: 0 0 4px 0; font-size: 18px; color: #1f3711; }
+    .print-sheet-header h3 { margin: 0 0 2px 0; font-size: 14px; color: #334155; }
+    .print-sheet-header small { font-size: 12px; color: #64748b; }
+    .print-sheet-content { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; }
+    @media print {
+      body { padding: 0; }
+      .mobile-print-bar { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="mobile-print-bar">
+    <button class="mobile-print-btn" onclick="window.print()">Imprimir / Salvar PDF</button>
+    <button class="mobile-close-btn" onclick="window.close()">Fechar</button>
+  </div>
+  ${clone.innerHTML}
+  <script>
+    window.onload = function() {
+      setTimeout(function() { window.print(); }, 350);
+    };
+  <\/script>
+</body>
+</html>`);
+  printWin.document.close();
 }
 
 function imprimirListaDoMesSelecionado() {

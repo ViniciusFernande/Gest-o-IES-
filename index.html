@@ -550,7 +550,7 @@
                   <th>Membro</th>
                   <th class="text-center">Categoria / Idade</th>
                   <th class="text-center">Data de Nascimento</th>
-                  <th class="text-center">Telefone / WhatsApp</th>
+                  <th class="text-center">Telefone</th>
                   <th class="text-center">Observação</th>
                   <th class="text-center">Status</th>
                   <th class="text-center">Ações</th>
@@ -581,7 +581,7 @@
                   <th>Membro</th>
                   <th class="text-center">Categoria</th>
                   <th class="text-center">Idade</th>
-                  <th class="text-center">Telefone / WhatsApp</th>
+                  <th class="text-center">Telefone</th>
                   <th class="text-center">Observação</th>
                   <th class="text-center">Ações</th>
                 </tr>
@@ -610,7 +610,7 @@
                   <th class="text-center">Dia</th>
                   <th>Membro</th>
                   <th class="text-center">Idade</th>
-                  <th class="text-center">Telefone / WhatsApp</th>
+                  <th class="text-center">Telefone</th>
                   <th class="text-center">Categoria</th>
                   <th class="text-center">Ações</th>
                 </tr>
@@ -721,7 +721,7 @@
                   <th>Membro</th>
                   <th class="text-center">Categoria</th>
                   <th class="text-center">Data de Nascimento</th>
-                  <th class="text-center">Telefone / WhatsApp</th>
+                  <th class="text-center">Telefone</th>
                   <th class="text-center">Observação</th>
                   <th class="text-center">Ações</th>
                 </tr>
@@ -773,7 +773,7 @@
                 <tr>
                   <th>Visitante</th>
                   <th class="text-center">Data da Visita</th>
-                  <th class="text-center">Telefone / WhatsApp</th>
+                  <th class="text-center">Telefone</th>
                   <th class="text-center">Observação</th>
                   <th class="text-center">Ações</th>
                 </tr>
@@ -788,7 +788,7 @@
         <!-- ================= VISÃO: RELATÓRIOS & IMPRESSÃO ================= -->
         <section class="view-section" id="viewRelatorios">
           <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
-            <button class="btn btn-primary" onclick="window.print()">
+            <button class="btn btn-primary" id="btnImprimirRelatorio" onclick="imprimirRelatorioAtual()">
               <i class="ph-bold ph-printer"></i>
               <span>Imprimir Relatório Agora</span>
             </button>
@@ -885,7 +885,7 @@
                 <input type="text" class="form-control" id="cfgCidadeIgreja" value="Piedade - SP">
               </div>
               <div class="form-group mt-2">
-                <label>Telefone / WhatsApp da Secretaria / Pastor:</label>
+                <label>Telefone da Secretaria / Pastor:</label>
                 <input type="text" class="form-control" id="cfgTelAdmin" placeholder="15 99769-6207" maxlength="13" autocomplete="off" spellcheck="false">
               </div>
                           <!-- Área Administrativa: Backup e Zerar Banco (Oculta para Visualizadores) -->
