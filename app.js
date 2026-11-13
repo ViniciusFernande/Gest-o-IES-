@@ -35,7 +35,9 @@ try {
 const USER_PROFILES = {
   'vinicius.fernandes1129@gmail.com': { name: 'Vinicius', role: 'admin' },
   'edna.fernandes1129@gmail.com': { name: 'Edna', role: 'viewer' },
-  'sementeirapiedade@gmail.com': { name: 'IES Piedade', role: 'viewer' }
+  'sementeirapiedade@gmail.com': { name: 'IES Piedade', role: 'viewer' },
+  'murilo@iespiedade.com': { name: 'Murilo', role: 'viewer' },
+  'claudio@iespiedade.com': { name: 'Claudio', role: 'viewer' }
 };
 
 const USER_ALIASES = {
@@ -51,7 +53,15 @@ const USER_ALIASES = {
   'ies piedade (visualização)': 'sementeirapiedade@gmail.com',
   'ies piedade (visualizacao)': 'sementeirapiedade@gmail.com',
   'sementeira': 'sementeirapiedade@gmail.com',
-  'sementeira piedade': 'sementeirapiedade@gmail.com'
+  'sementeira piedade': 'sementeirapiedade@gmail.com',
+  'murilo': 'murilo@iespiedade.com',
+  'murilo (visualização)': 'murilo@iespiedade.com',
+  'murilo (visualizacao)': 'murilo@iespiedade.com',
+  'claudio': 'claudio@iespiedade.com',
+  'cláudio': 'claudio@iespiedade.com',
+  'claudio (visualização)': 'claudio@iespiedade.com',
+  'claudio (visualizacao)': 'claudio@iespiedade.com',
+  'cláudio (visualização)': 'claudio@iespiedade.com'
 };
 
 function resolverEmailUsuario(input) {
@@ -543,6 +553,11 @@ function calcularIdade(dataNasc) {
     idade--;
   }
   return idade;
+}
+
+function getPrimeiroNome(nome) {
+  if (!nome || typeof nome !== 'string') return '';
+  return nome.trim().split(/\s+/)[0] || '';
 }
 
 function getIniciais(nome) {
@@ -1438,7 +1453,7 @@ function abrirWhatsappVisitante(id) {
   }
   const foneFinal = numeroLimpo.startsWith('55') ? numeroLimpo : `55${numeroLimpo}`;
   const msgTemplate = config.msgWhatsappVisitante || DEFAULT_CONFIG.msgWhatsappVisitante;
-  const msg = msgTemplate.replace(/\{NOME\}/g, v.nome);
+  const msg = msgTemplate.replace(/\{NOME\}/g, getPrimeiroNome(v.nome));
   window.open(`https://wa.me/${foneFinal}?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
@@ -2050,7 +2065,7 @@ function abrirModalParabens(membro) {
 
   // Prepara texto personalizado
   const msgTemplate = config.msgWhatsapp || DEFAULT_CONFIG.msgWhatsapp;
-  const msgPronta = msgTemplate.replace(/\{NOME\}/g, membro.nome);
+  const msgPronta = msgTemplate.replace(/\{NOME\}/g, getPrimeiroNome(membro.nome));
   document.getElementById('txtModalWhatsappMsg').value = msgPronta;
 
   document.getElementById('modalWhatsapp').classList.add('active');
@@ -2535,30 +2550,30 @@ function inicializarAppCompleta() {
   if (txtMsg) {
     txtMsg.value = config.msgWhatsapp || DEFAULT_CONFIG.msgWhatsapp;
     txtMsg.addEventListener('input', () => {
-      document.getElementById('previewWhatsappText').textContent = txtMsg.value.replace(/\{NOME\}/g, 'Moisés de Oliveira');
+      document.getElementById('previewWhatsappText').textContent = txtMsg.value.replace(/\{NOME\}/g, 'Moisés');
     });
-    document.getElementById('previewWhatsappText').textContent = (config.msgWhatsapp || DEFAULT_CONFIG.msgWhatsapp).replace(/\{NOME\}/g, 'Moisés de Oliveira');
+    document.getElementById('previewWhatsappText').textContent = (config.msgWhatsapp || DEFAULT_CONFIG.msgWhatsapp).replace(/\{NOME\}/g, 'Moisés');
   }
 
   const txtMsgVisitante = document.getElementById('txtConfigMsgVisitante');
   if (txtMsgVisitante) {
     txtMsgVisitante.value = config.msgWhatsappVisitante || DEFAULT_CONFIG.msgWhatsappVisitante;
     txtMsgVisitante.addEventListener('input', () => {
-      document.getElementById('previewWhatsappVisitanteText').textContent = txtMsgVisitante.value.replace(/\{NOME\}/g, 'João da Silva');
+      document.getElementById('previewWhatsappVisitanteText').textContent = txtMsgVisitante.value.replace(/\{NOME\}/g, 'João');
     });
-    document.getElementById('previewWhatsappVisitanteText').textContent = (config.msgWhatsappVisitante || DEFAULT_CONFIG.msgWhatsappVisitante).replace(/\{NOME\}/g, 'João da Silva');
+    document.getElementById('previewWhatsappVisitanteText').textContent = (config.msgWhatsappVisitante || DEFAULT_CONFIG.msgWhatsappVisitante).replace(/\{NOME\}/g, 'João');
   }
 
   window.preencherConfigForm = function () {
     const elMsg = document.getElementById('txtConfigMsgWhatsapp');
     const elPrev = document.getElementById('previewWhatsappText');
     if (elMsg) elMsg.value = config.msgWhatsapp || DEFAULT_CONFIG.msgWhatsapp;
-    if (elPrev) elPrev.textContent = (config.msgWhatsapp || DEFAULT_CONFIG.msgWhatsapp).replace(/\{NOME\}/g, 'Moisés de Oliveira');
+    if (elPrev) elPrev.textContent = (config.msgWhatsapp || DEFAULT_CONFIG.msgWhatsapp).replace(/\{NOME\}/g, 'Moisés');
 
     const elMsgVis = document.getElementById('txtConfigMsgVisitante');
     const elPrevVis = document.getElementById('previewWhatsappVisitanteText');
     if (elMsgVis) elMsgVis.value = config.msgWhatsappVisitante || DEFAULT_CONFIG.msgWhatsappVisitante;
-    if (elPrevVis) elPrevVis.textContent = (config.msgWhatsappVisitante || DEFAULT_CONFIG.msgWhatsappVisitante).replace(/\{NOME\}/g, 'João da Silva');
+    if (elPrevVis) elPrevVis.textContent = (config.msgWhatsappVisitante || DEFAULT_CONFIG.msgWhatsappVisitante).replace(/\{NOME\}/g, 'João');
 
     const elNome = document.getElementById('cfgNomeIgreja');
     const elCidade = document.getElementById('cfgCidadeIgreja');
