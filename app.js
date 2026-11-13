@@ -1439,6 +1439,23 @@ function excluirVisitante(id) {
   }
 }
 
+function abrirLinkWhatsapp(telefoneLimpo, mensagem) {
+  const textoLimpo = (mensagem || '').replace(/\uFFFD/g, '');
+  const encoded = encodeURIComponent(textoLimpo);
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  const ddi = telefoneLimpo
+    ? (telefoneLimpo.startsWith('55') && telefoneLimpo.length > 11 ? telefoneLimpo : (telefoneLimpo.length <= 11 ? `55${telefoneLimpo}` : telefoneLimpo))
+    : '';
+
+  if (isMobile) {
+    const url = ddi ? `https://wa.me/${ddi}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
+    window.open(url, '_blank');
+  } else {
+    const url = ddi ? `https://web.whatsapp.com/send?phone=${ddi}&text=${encoded}` : `https://web.whatsapp.com/send?text=${encoded}`;
+    window.open(url, '_blank');
+  }
+}
+
 function abrirWhatsappVisitante(id) {
   const v = visitantes.find(x => x.id === id);
   if (!v || !v.telefone) return;
@@ -1451,10 +1468,9 @@ function abrirWhatsappVisitante(id) {
     mostrarToast('Número de telefone inválido.', 'warning');
     return;
   }
-  const foneFinal = numeroLimpo.startsWith('55') ? numeroLimpo : `55${numeroLimpo}`;
   const msgTemplate = config.msgWhatsappVisitante || DEFAULT_CONFIG.msgWhatsappVisitante;
   const msg = msgTemplate.replace(/\{NOME\}/g, getPrimeiroNome(v.nome));
-  window.open(`https://wa.me/${foneFinal}?text=${encodeURIComponent(msg)}`, '_blank');
+  abrirLinkWhatsapp(numeroLimpo, msg);
 }
 
 // ================= ANIVERSARIANTES DO MÊS =================
@@ -2075,15 +2091,8 @@ function confirmarEnvioWhatsapp() {
   if (!membroParaParabens) return;
   const telLimpo = (membroParaParabens.telefone || '').replace(/\D/g, '');
   const texto = document.getElementById('txtModalWhatsappMsg').value;
-  const encoded = encodeURIComponent(texto);
 
-  let url = `https://api.whatsapp.com/send?text=${encoded}`;
-  if (telLimpo) {
-    const ddi = telLimpo.length <= 11 ? '55' + telLimpo : telLimpo;
-    url = `https://api.whatsapp.com/send?phone=${ddi}&text=${encoded}`;
-  }
-
-  window.open(url, '_blank');
+  abrirLinkWhatsapp(telLimpo, texto);
   document.getElementById('modalWhatsapp').classList.remove('active');
   mostrarToast('Abrindo WhatsApp para parabenizar...', 'success');
 }
