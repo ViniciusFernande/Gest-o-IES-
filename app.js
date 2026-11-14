@@ -35,9 +35,7 @@ try {
 const USER_PROFILES = {
   'vinicius.fernandes1129@gmail.com': { name: 'Vinicius', role: 'admin' },
   'edna.fernandes1129@gmail.com': { name: 'Edna', role: 'viewer' },
-  'sementeirapiedade@gmail.com': { name: 'IES Piedade', role: 'viewer' },
-  'murilo@iespiedade.com': { name: 'Murilo', role: 'viewer' },
-  'claudio@iespiedade.com': { name: 'Claudio', role: 'viewer' }
+  'sementeirapiedade@gmail.com': { name: 'IES Piedade', role: 'viewer' }
 };
 
 const USER_ALIASES = {
@@ -53,15 +51,7 @@ const USER_ALIASES = {
   'ies piedade (visualização)': 'sementeirapiedade@gmail.com',
   'ies piedade (visualizacao)': 'sementeirapiedade@gmail.com',
   'sementeira': 'sementeirapiedade@gmail.com',
-  'sementeira piedade': 'sementeirapiedade@gmail.com',
-  'murilo': 'murilo@iespiedade.com',
-  'murilo (visualização)': 'murilo@iespiedade.com',
-  'murilo (visualizacao)': 'murilo@iespiedade.com',
-  'claudio': 'claudio@iespiedade.com',
-  'cláudio': 'claudio@iespiedade.com',
-  'claudio (visualização)': 'claudio@iespiedade.com',
-  'claudio (visualizacao)': 'claudio@iespiedade.com',
-  'cláudio (visualização)': 'claudio@iespiedade.com'
+  'sementeira piedade': 'sementeirapiedade@gmail.com'
 };
 
 function resolverEmailUsuario(input) {
@@ -553,11 +543,6 @@ function calcularIdade(dataNasc) {
     idade--;
   }
   return idade;
-}
-
-function getPrimeiroNome(nome) {
-  if (!nome || typeof nome !== 'string') return '';
-  return nome.trim().split(/\s+/)[0] || '';
 }
 
 function getIniciais(nome) {
@@ -1250,47 +1235,9 @@ function renderizarTabelaMembros() {
 function renderizarTabelaVisitantes() {
   const tbody = document.getElementById('tbodyVisitantes');
   const busca = (document.getElementById('filterSearchVisitante')?.value || '').toLowerCase();
-  const selMes = document.getElementById('filterVisitantesMes');
-  const selAno = document.getElementById('filterVisitantesAno');
-  const btnLimpar = document.getElementById('btnLimparFiltroVisitantes');
   if (!tbody) return;
 
-  // Atualiza opções de anos dinamicamente a partir de 2026 mantendo a seleção atual
-  if (selAno) {
-    const anoSelecionado = selAno.value || 'todos';
-    const anoAtual = new Date().getFullYear();
-    const anosSet = new Set();
-    for (let y = 2026; y <= Math.max(2026, anoAtual); y++) anosSet.add(y);
-    visitantes.forEach(v => {
-      if (v.dataVisita && /^\d{4}-/.test(v.dataVisita)) {
-        const a = parseInt(v.dataVisita.slice(0, 4), 10);
-        if (a >= 2026) anosSet.add(a);
-      }
-    });
-    const anosOrdenados = Array.from(anosSet).sort((a, b) => a - b);
-    selAno.innerHTML = `<option value="todos">Todos os anos</option>` +
-      anosOrdenados.map(a => `<option value="${a}">${a}</option>`).join('');
-    selAno.value = (anoSelecionado !== 'todos' && anosSet.has(parseInt(anoSelecionado, 10))) ? anoSelecionado : 'todos';
-  }
-
-  const mesFiltro = selMes ? selMes.value : 'todos';
-  const anoFiltro = selAno ? selAno.value : 'todos';
-
-  if (btnLimpar) {
-    btnLimpar.style.display = (mesFiltro !== 'todos' || anoFiltro !== 'todos') ? 'inline-flex' : 'none';
-  }
-
   const filtrados = visitantes.filter(v => {
-    if (mesFiltro !== 'todos' || anoFiltro !== 'todos') {
-      if (!v.dataVisita) return false;
-      const parts = v.dataVisita.split('-');
-      if (parts.length !== 3) return false;
-      const ano = parts[0];
-      const mesIdx = String(parseInt(parts[1], 10) - 1);
-      if (anoFiltro !== 'todos' && ano !== anoFiltro) return false;
-      if (mesFiltro !== 'todos' && mesIdx !== mesFiltro) return false;
-    }
-
     if (!busca) return true;
     const matchNome = (v.nome || '').toLowerCase().includes(busca);
     const matchObs = (v.observacao || '').toLowerCase().includes(busca);
@@ -1299,7 +1246,7 @@ function renderizarTabelaVisitantes() {
   });
 
   const elCount = document.getElementById('countPillVisitantes');
-  if (elCount) elCount.textContent = filtrados.length;
+  if (elCount) elCount.textContent = visitantes.length;
 
   filtrados.sort((a, b) => {
     const da = a.dataVisita || '';
@@ -1477,23 +1424,6 @@ function excluirVisitante(id) {
   }
 }
 
-function abrirLinkWhatsapp(telefoneLimpo, mensagem) {
-  const textoLimpo = (mensagem || '').replace(/\uFFFD/g, '');
-  const encoded = encodeURIComponent(textoLimpo);
-  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  const ddi = telefoneLimpo
-    ? (telefoneLimpo.startsWith('55') && telefoneLimpo.length > 11 ? telefoneLimpo : (telefoneLimpo.length <= 11 ? `55${telefoneLimpo}` : telefoneLimpo))
-    : '';
-
-  if (isMobile) {
-    const url = ddi ? `https://wa.me/${ddi}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
-    window.open(url, '_blank');
-  } else {
-    const url = ddi ? `https://web.whatsapp.com/send?phone=${ddi}&text=${encoded}` : `https://web.whatsapp.com/send?text=${encoded}`;
-    window.open(url, '_blank');
-  }
-}
-
 function abrirWhatsappVisitante(id) {
   const v = visitantes.find(x => x.id === id);
   if (!v || !v.telefone) return;
@@ -1506,19 +1436,21 @@ function abrirWhatsappVisitante(id) {
     mostrarToast('Número de telefone inválido.', 'warning');
     return;
   }
+  const foneFinal = numeroLimpo.startsWith('55') ? numeroLimpo : `55${numeroLimpo}`;
   const msgTemplate = config.msgWhatsappVisitante || DEFAULT_CONFIG.msgWhatsappVisitante;
-  const msg = msgTemplate.replace(/\{NOME\}/g, getPrimeiroNome(v.nome));
-  abrirLinkWhatsapp(numeroLimpo, msg);
+  const msg = msgTemplate.replace(/\{NOME\}/g, v.nome);
+  window.open(`https://wa.me/${foneFinal}?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
 // ================= ANIVERSARIANTES DO MÊS =================
 function renderizarTabelaAniversariantesMes() {
-  const selMes = document.getElementById('selectMesAniversariantes');
-  if (selMes) {
-    if (selMes.options.length === 0) {
-      selMes.innerHTML = NOMES_MESES.map((nome, idx) => `<option value="${idx}">${nome}</option>`).join('');
-    }
-    selMes.value = String(selectedAnivMonth);
+  const containerBtns = document.getElementById('monthSelectorButtons');
+  if (containerBtns && containerBtns.children.length === 0) {
+    containerBtns.innerHTML = NOMES_MESES.map((nome, idx) => `
+      <button class="month-btn-pill ${idx === selectedAnivMonth ? 'active' : ''}" onclick="selecionarMesAniversariante(${idx})">
+        ${nome}
+      </button>
+    `).join('');
   }
 
   document.getElementById('labelAniversariantesMesTitulo').textContent = `Aniversariantes de ${NOMES_MESES[selectedAnivMonth]}`;
@@ -1575,11 +1507,10 @@ function renderizarTabelaAniversariantesMes() {
 }
 
 function selecionarMesAniversariante(idx) {
-  const mesNum = Number.isInteger(idx) ? idx : parseInt(idx, 10);
-  if (Number.isNaN(mesNum) || mesNum < 0 || mesNum > 11) return;
-  selectedAnivMonth = mesNum;
-  const selMes = document.getElementById('selectMesAniversariantes');
-  if (selMes) selMes.value = String(mesNum);
+  selectedAnivMonth = idx;
+  document.querySelectorAll('.month-btn-pill').forEach((btn, i) => {
+    btn.classList.toggle('active', i === idx);
+  });
   renderizarTabelaAniversariantesMes();
 }
 
@@ -2119,7 +2050,7 @@ function abrirModalParabens(membro) {
 
   // Prepara texto personalizado
   const msgTemplate = config.msgWhatsapp || DEFAULT_CONFIG.msgWhatsapp;
-  const msgPronta = msgTemplate.replace(/\{NOME\}/g, getPrimeiroNome(membro.nome));
+  const msgPronta = msgTemplate.replace(/\{NOME\}/g, membro.nome);
   document.getElementById('txtModalWhatsappMsg').value = msgPronta;
 
   document.getElementById('modalWhatsapp').classList.add('active');
@@ -2129,8 +2060,15 @@ function confirmarEnvioWhatsapp() {
   if (!membroParaParabens) return;
   const telLimpo = (membroParaParabens.telefone || '').replace(/\D/g, '');
   const texto = document.getElementById('txtModalWhatsappMsg').value;
+  const encoded = encodeURIComponent(texto);
 
-  abrirLinkWhatsapp(telLimpo, texto);
+  let url = `https://api.whatsapp.com/send?text=${encoded}`;
+  if (telLimpo) {
+    const ddi = telLimpo.length <= 11 ? '55' + telLimpo : telLimpo;
+    url = `https://api.whatsapp.com/send?phone=${ddi}&text=${encoded}`;
+  }
+
+  window.open(url, '_blank');
   document.getElementById('modalWhatsapp').classList.remove('active');
   mostrarToast('Abrindo WhatsApp para parabenizar...', 'success');
 }
@@ -2194,68 +2132,31 @@ function restaurarBackup(file) {
 // ================= RELATÓRIOS PARA IMPRESSÃO =================
 let relatorioAtualTipo = 'aniversariantes';
 
-let relatorioAnivMes = String(selectedAnivMonth);
-let relatorioVisitantesMes = 'todos';
-let relatorioVisitantesAno = 'todos';
-
 function selecionarRelatorio(tipo, mesParam = null) {
   relatorioAtualTipo = tipo;
 
   const boxAniv = document.getElementById('btnReportAniversariantes');
   const boxMembros = document.getElementById('btnReportGeralMembros');
   const boxEventos = document.getElementById('btnReportEventos');
-  const boxVisitantes = document.getElementById('btnReportVisitantes');
 
   if (boxAniv) boxAniv.classList.toggle('active', tipo === 'aniversariantes');
   if (boxMembros) boxMembros.classList.toggle('active', tipo === 'membros');
   if (boxEventos) boxEventos.classList.toggle('active', tipo === 'eventos');
-  if (boxVisitantes) boxVisitantes.classList.toggle('active', tipo === 'visitantes');
 
   if (tipo === 'aniversariantes') {
-    if (mesParam !== null && mesParam !== undefined) {
-      relatorioAnivMes = String(mesParam);
-    }
-    gerarRelatorioBoletim(relatorioAnivMes);
+    gerarRelatorioBoletim(mesParam !== null ? mesParam : selectedAnivMonth);
   } else if (tipo === 'membros') {
     gerarRelatorioGeralMembros();
   } else if (tipo === 'eventos') {
     gerarRelatorioEventos();
-  } else if (tipo === 'visitantes') {
-    gerarRelatorioVisitantes();
   }
 }
 
-function mudarFiltroRelatorioAniv() {
-  const sel = document.getElementById('relatorioAnivFiltroMes');
-  if (!sel) return;
-  relatorioAnivMes = sel.value || 'todos';
-  gerarRelatorioBoletim(relatorioAnivMes);
-}
-
 function gerarRelatorioBoletim(mesIndex = null) {
-  const filtro = (mesIndex !== null && mesIndex !== undefined) ? String(mesIndex) : relatorioAnivMes;
-  relatorioAnivMes = filtro;
-  const isAnoTodo = filtro === 'todos';
-  const mesNum = isAnoTodo ? null : parseInt(filtro, 10);
-  const mesNome = !isAnoTodo ? (NOMES_MESES[mesNum] || NOMES_MESES[new Date().getMonth()]) : 'Ano Todo';
-
-  const ativos = membros.filter(m => {
-    if (m.status !== 'ativo' || !m.nascimento) return false;
-    if (isAnoTodo) return /^\d{4}-\d{2}-\d{2}/.test(m.nascimento);
-    return isAniversarioMes(m.nascimento, mesNum);
-  });
-
-  ativos.sort((a, b) => {
-    const partsA = a.nascimento.split('-');
-    const partsB = b.nascimento.split('-');
-    const mesA = parseInt(partsA[1], 10);
-    const mesB = parseInt(partsB[1], 10);
-    if (mesA !== mesB) return mesA - mesB;
-    const diaA = parseInt(partsA[2], 10);
-    const diaB = parseInt(partsB[2], 10);
-    if (diaA !== diaB) return diaA - diaB;
-    return (a.nome || '').localeCompare(b.nome || '', 'pt-BR', { sensitivity: 'base' });
-  });
+  const mes = (mesIndex !== null && mesIndex !== undefined) ? mesIndex : selectedAnivMonth;
+  const mesNome = NOMES_MESES[mes] || NOMES_MESES[new Date().getMonth()];
+  const ativos = membros.filter(m => m.status === 'ativo' && isAniversarioMes(m.nascimento, mes));
+  ativos.sort((a,b) => parseInt(a.nascimento.split('-')[2], 10) - parseInt(b.nascimento.split('-')[2], 10));
 
   const elTitle = document.getElementById('printSheetTitle');
   const elDate = document.getElementById('printSheetDate');
@@ -2266,47 +2167,34 @@ function gerarRelatorioBoletim(mesIndex = null) {
 
   if (!content) return;
 
-  const barraFiltrosHtml = `
-    <div class="no-print" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:14px; padding:10px 14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px;">
-      <span style="font-size:12.5px; font-weight:700; color:#334155;">Filtrar período:</span>
-      <select id="relatorioAnivFiltroMes" class="chart-year-select" onchange="mudarFiltroRelatorioAniv()">
-        <option value="todos" ${isAnoTodo ? 'selected' : ''}>Ano todo (Todos os meses)</option>
-        ${NOMES_MESES.map((m, idx) => `<option value="${idx}" ${!isAnoTodo && mesNum === idx ? 'selected' : ''}>${m}</option>`).join('')}
-      </select>
-    </div>
-  `;
-
   if (ativos.length === 0) {
-    content.innerHTML = barraFiltrosHtml + `
+    content.innerHTML = `
       <div style="padding: 36px 20px; text-align: center; color: var(--text-muted);">
         <i class="ph-fill ph-cake" style="font-size: 42px; margin-bottom: 12px; display: inline-block; color: var(--sprout-700);"></i>
-        <p style="font-size: 15px; margin: 0; font-weight: 500;">${isAnoTodo ? 'Nenhum aniversariante encontrado.' : `Nenhum aniversariante encontrado para o mês de ${mesNome}.`}</p>
+        <p style="font-size: 15px; margin: 0; font-weight: 500;">Nenhum aniversariante encontrado para o mês de ${mesNome}.</p>
       </div>
     `;
     return;
   }
 
-  content.innerHTML = barraFiltrosHtml + `
+  content.innerHTML = `
     <table class="data-table" style="width:100%; border:1px solid #d5dec9; margin-top:16px;">
       <thead>
         <tr style="background:#eaf2e1;">
-          <th style="padding:10px 14px; width:${isAnoTodo ? '110px' : '70px'}; border-bottom:2px solid #b8cb9f; color:#1f3711;">${isAnoTodo ? 'Data' : 'Dia'}</th>
+          <th style="padding:10px 14px; width:70px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Dia</th>
           <th style="padding:10px 14px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Nome do Membro</th>
           <th style="padding:10px 14px; width:90px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Idade</th>
-          <th style="padding:10px 14px; width:150px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Telefone</th>
+          <th style="padding:10px 14px; width:150px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Telefone / WhatsApp</th>
           <th style="padding:10px 14px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Observação</th>
         </tr>
       </thead>
       <tbody>
         ${ativos.map(m => {
-          const parts = m.nascimento ? m.nascimento.split('-') : [];
-          const dia = parts[2] || '-';
-          const mesCol = parts[1] ? (NOMES_MESES[parseInt(parts[1], 10) - 1] || '').slice(0, 3) : '';
-          const dataLabel = isAnoTodo ? `${dia}/${parts[1] || '--'} (${mesCol})` : `Dia ${dia}`;
+          const dia = m.nascimento ? m.nascimento.split('-')[2] : '-';
           const idade = calcularIdade(m.nascimento);
           return `
             <tr>
-              <td style="padding:10px 14px; border-top:1px solid #e2ebd8;"><strong>${dataLabel}</strong></td>
+              <td style="padding:10px 14px; border-top:1px solid #e2ebd8;"><strong>Dia ${dia}</strong></td>
               <td style="padding:10px 14px; border-top:1px solid #e2ebd8; font-weight:600;">${m.nome}</td>
               <td style="padding:10px 14px; border-top:1px solid #e2ebd8; color:#2b4c16; font-weight:600;">${idade !== '' ? idade + ' anos' : '-'}</td>
               <td style="padding:10px 14px; border-top:1px solid #e2ebd8;">${m.telefone || '-'}</td>
@@ -2317,7 +2205,7 @@ function gerarRelatorioBoletim(mesIndex = null) {
       </tbody>
     </table>
     <div style="margin-top: 20px; padding: 12px 18px; background: #f6faf1; border-radius: 8px; border-left: 4px solid #6fa807; display: flex; justify-content: space-between; align-items: center; font-size: 13.5px;">
-      <span><strong>${isAnoTodo ? 'Total no ano:' : 'Total no mês:'}</strong> ${ativos.length} aniversariante(s)</span>
+      <span><strong>Total no mês:</strong> ${ativos.length} aniversariante(s)</span>
       <span style="color: var(--text-muted);">Igreja Evangélica Sementeira - Piedade</span>
     </div>
   `;
@@ -2358,7 +2246,7 @@ function gerarRelatorioGeralMembros() {
           <th style="padding:10px 14px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Nome do Membro</th>
           <th style="padding:10px 14px; width:80px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Idade</th>
           <th style="padding:10px 14px; width:100px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Nascimento</th>
-          <th style="padding:10px 14px; width:140px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Telefone</th>
+          <th style="padding:10px 14px; width:140px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Telefone / WhatsApp</th>
           <th style="padding:10px 14px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Observação</th>
         </tr>
       </thead>
@@ -2457,270 +2345,6 @@ function gerarRelatorioEventos() {
 }
 
 // Imprime a lista do mês selecionado na aba Aniversariantes do Mês
-function mudarFiltroRelatorioVisitantes() {
-  const selMes = document.getElementById('relatorioVisitantesMes');
-  const selAno = document.getElementById('relatorioVisitantesAno');
-  relatorioVisitantesMes = selMes ? selMes.value : 'todos';
-  relatorioVisitantesAno = selAno ? selAno.value : 'todos';
-  gerarRelatorioVisitantes();
-}
-
-function gerarRelatorioVisitantes() {
-  const elTitle = document.getElementById('printSheetTitle');
-  const elDate = document.getElementById('printSheetDate');
-  const content = document.getElementById('printSheetContent');
-
-  let subtitulo = 'Todos os períodos';
-  if (relatorioVisitantesMes !== 'todos' && relatorioVisitantesAno !== 'todos') {
-    subtitulo = `${NOMES_MESES[parseInt(relatorioVisitantesMes, 10)]} de ${relatorioVisitantesAno}`;
-  } else if (relatorioVisitantesMes !== 'todos') {
-    subtitulo = `Mês de ${NOMES_MESES[parseInt(relatorioVisitantesMes, 10)]}`;
-  } else if (relatorioVisitantesAno !== 'todos') {
-    subtitulo = `Ano de ${relatorioVisitantesAno}`;
-  }
-
-  if (elTitle) elTitle.textContent = `Relatório de Visitantes (${subtitulo})`;
-  if (elDate) elDate.textContent = `Emitido em ${new Date().toLocaleDateString('pt-BR')}`;
-  if (!content) return;
-
-  const anoAtual = new Date().getFullYear();
-  const anosSet = new Set();
-  for (let y = 2025; y <= anoAtual; y++) anosSet.add(y);
-  visitantes.forEach(v => {
-    if (v.dataVisita && /^\d{4}-/.test(v.dataVisita)) {
-      const a = parseInt(v.dataVisita.slice(0, 4), 10);
-      if (a >= 2025) anosSet.add(a);
-    }
-  });
-  const anosOrdenados = Array.from(anosSet).sort((a, b) => a - b);
-
-  const filtrados = visitantes.filter(v => {
-    if (!v.dataVisita) return relatorioVisitantesMes === 'todos' && relatorioVisitantesAno === 'todos';
-    const parts = v.dataVisita.split('-');
-    if (parts.length !== 3) return false;
-    const ano = parts[0];
-    const mesIdx = String(parseInt(parts[1], 10) - 1);
-    if (relatorioVisitantesAno !== 'todos' && ano !== relatorioVisitantesAno) return false;
-    if (relatorioVisitantesMes !== 'todos' && mesIdx !== relatorioVisitantesMes) return false;
-    return true;
-  });
-
-  filtrados.sort((a, b) => {
-    const da = a.dataVisita || '';
-    const dbDate = b.dataVisita || '';
-    if (da !== dbDate) return dbDate.localeCompare(da);
-    return (a.nome || '').trim().localeCompare((b.nome || '').trim(), 'pt-BR', { sensitivity: 'base' });
-  });
-
-  const barraFiltrosHtml = `
-    <div class="no-print" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:14px; padding:10px 14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px;">
-      <span style="font-size:12.5px; font-weight:700; color:#334155;">Filtrar período:</span>
-      <select id="relatorioVisitantesMes" class="chart-year-select" onchange="mudarFiltroRelatorioVisitantes()">
-        <option value="todos" ${relatorioVisitantesMes === 'todos' ? 'selected' : ''}>Todos os meses</option>
-        ${NOMES_MESES.map((m, idx) => `<option value="${idx}" ${relatorioVisitantesMes === String(idx) ? 'selected' : ''}>${m}</option>`).join('')}
-      </select>
-      <select id="relatorioVisitantesAno" class="chart-year-select" onchange="mudarFiltroRelatorioVisitantes()">
-        <option value="todos" ${relatorioVisitantesAno === 'todos' ? 'selected' : ''}>Todos os anos</option>
-        ${anosOrdenados.map(a => `<option value="${a}" ${relatorioVisitantesAno === String(a) ? 'selected' : ''}>${a}</option>`).join('')}
-      </select>
-    </div>
-  `;
-
-  if (filtrados.length === 0) {
-    content.innerHTML = barraFiltrosHtml + `
-      <div style="padding: 36px 20px; text-align: center; color: var(--text-muted);">
-        <i class="ph-fill ph-user-focus" style="font-size: 42px; margin-bottom: 12px; display: inline-block; color: var(--sprout-700);"></i>
-        <p style="font-size: 15px; margin: 0; font-weight: 500;">Nenhum visitante encontrado para o período selecionado.</p>
-      </div>
-    `;
-    return;
-  }
-
-  content.innerHTML = barraFiltrosHtml + `
-    <table class="data-table" style="width:100%; border:1px solid #d5dec9; margin-top:16px;">
-      <thead>
-        <tr style="background:#eaf2e1;">
-          <th style="padding:10px 14px; width:115px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Data da Visita</th>
-          <th style="padding:10px 14px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Nome do Visitante</th>
-          <th style="padding:10px 14px; width:150px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Telefone</th>
-          <th style="padding:10px 14px; width:110px; border-bottom:2px solid #b8cb9f; color:#1f3711;">WhatsApp</th>
-          <th style="padding:10px 14px; border-bottom:2px solid #b8cb9f; color:#1f3711;">Observação</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${filtrados.map(v => {
-          const parts = v.dataVisita ? v.dataVisita.split('-') : ['', '', ''];
-          const dataFmt = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : '-';
-          const temWapp = (v.temWhatsapp !== false && v.temWhatsapp !== 'nao') ? 'Sim' : 'Não';
-          return `
-            <tr>
-              <td style="padding:10px 14px; border-top:1px solid #e2ebd8;"><strong>${dataFmt}</strong></td>
-              <td style="padding:10px 14px; border-top:1px solid #e2ebd8; font-weight:600;">${v.nome}</td>
-              <td style="padding:10px 14px; border-top:1px solid #e2ebd8;">${v.telefone ? formatarTelefone(v.telefone) : '-'}</td>
-              <td style="padding:10px 14px; border-top:1px solid #e2ebd8;">${temWapp}</td>
-              <td style="padding:10px 14px; border-top:1px solid #e2ebd8;">${v.observacao || '-'}</td>
-            </tr>
-          `;
-        }).join('')}
-      </tbody>
-    </table>
-    <div style="margin-top:14px; text-align:right; font-size:13px; font-weight:700; color:#2b4c16;">
-      Total de visitantes listados: ${filtrados.length}
-    </div>
-  `;
-}
-
-async function imprimirRelatorioAtual() {
-  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-  const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth <= 768;
-
-  if (!isMobile && !isStandalone) {
-    window.print();
-    return;
-  }
-
-  if (!window.jspdf || !window.jspdf.jsPDF) {
-    window.print();
-    return;
-  }
-
-  try {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const pageWidth = doc.internal.pageSize.getWidth();
-
-    const titulo = document.getElementById('printSheetTitle')?.textContent?.trim() || 'Relatório IES';
-    const dataEmissao = document.getElementById('printSheetDate')?.textContent?.trim() || `Emitido em ${new Date().toLocaleDateString('pt-BR')}`;
-
-    let startX = 14;
-    try {
-      const logoImg = document.querySelector('#printSheet .print-sheet-logo');
-      if (logoImg && logoImg.complete && logoImg.naturalWidth > 0) {
-        const canvas = document.createElement('canvas');
-        canvas.width = logoImg.naturalWidth;
-        canvas.height = logoImg.naturalHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(logoImg, 0, 0);
-        const logoDataUrl = canvas.toDataURL('image/png');
-        doc.addImage(logoDataUrl, 'PNG', 14, 12, 16, 16);
-        startX = 34;
-      }
-    } catch (e) {
-      // Ignora erro de logo se houver restrição de canvas
-    }
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(14);
-    doc.setTextColor(31, 55, 17);
-    doc.text('Igreja Evangélica Sementeira - Piedade', startX, 17);
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.setTextColor(51, 65, 85);
-    doc.text(titulo, startX, 23);
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(100, 116, 139);
-    doc.text(dataEmissao, startX, 28);
-
-    doc.setDrawColor(31, 55, 17);
-    doc.setLineWidth(0.6);
-    doc.line(14, 32, pageWidth - 14, 32);
-
-    const tabela = document.querySelector('#printSheetContent table');
-    let finalY = 38;
-
-    if (tabela && typeof doc.autoTable === 'function') {
-      doc.autoTable({
-        html: tabela,
-        startY: 36,
-        margin: { left: 14, right: 14, bottom: 18 },
-        theme: 'grid',
-        styles: {
-          font: 'helvetica',
-          fontSize: 8.5,
-          cellPadding: 3,
-          textColor: [30, 41, 59],
-          lineColor: [213, 222, 201],
-          lineWidth: 0.2
-        },
-        headStyles: {
-          fillColor: [234, 242, 225],
-          textColor: [31, 55, 17],
-          fontStyle: 'bold'
-        },
-        alternateRowStyles: {
-          fillColor: [250, 252, 248]
-        }
-      });
-      finalY = (doc.lastAutoTable?.finalY || 38) + 8;
-    } else {
-      const textoVazio = document.querySelector('#printSheetContent p')?.textContent?.trim() || 'Nenhum registro encontrado.';
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10.5);
-      doc.setTextColor(100, 116, 139);
-      doc.text(textoVazio, 14, 44);
-      finalY = 54;
-    }
-
-    const totalEl = document.querySelector('#printSheetContent > div:last-child span:first-child');
-    if (totalEl && totalEl.textContent) {
-      if (finalY > doc.internal.pageSize.getHeight() - 20) {
-        doc.addPage();
-        finalY = 20;
-      }
-      doc.setFillColor(246, 250, 241);
-      doc.rect(14, finalY - 4, pageWidth - 28, 10, 'F');
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(9.5);
-      doc.setTextColor(31, 55, 17);
-      doc.text(totalEl.textContent.trim(), 17, finalY + 2.5);
-    }
-
-    const totalPages = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= totalPages; i++) {
-      doc.setPage(i);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      doc.setTextColor(148, 163, 184);
-      doc.text(`Página ${i} de ${totalPages}`, pageWidth - 14, doc.internal.pageSize.getHeight() - 8, { align: 'right' });
-    }
-
-    const slug = titulo
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '');
-    const fileName = `${slug || 'relatorio-ies'}.pdf`;
-    const pdfBlob = doc.output('blob');
-
-    if (navigator.share && navigator.canShare) {
-      const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
-      if (navigator.canShare({ files: [pdfFile] })) {
-        try {
-          await navigator.share({
-            files: [pdfFile],
-            title: titulo
-          });
-          return;
-        } catch (shareErr) {
-          if (shareErr && shareErr.name === 'AbortError') return;
-        }
-      }
-    }
-
-    doc.save(fileName);
-    if (typeof mostrarToast === 'function') {
-      mostrarToast('PDF gerado e salvo com sucesso!', 'success');
-    }
-  } catch (err) {
-    console.error('Erro ao gerar PDF no celular:', err);
-    if (typeof mostrarToast === 'function') {
-      mostrarToast('Erro ao gerar o PDF. Tente novamente.', 'error');
-    }
-  }
-}
 function imprimirListaDoMesSelecionado() {
   const mesIndex = selectedAnivMonth;
   const viewOrigem = currentView;
@@ -2859,15 +2483,6 @@ function inicializarAppCompleta() {
 
   document.getElementById('filterSearchMembro')?.addEventListener('input', renderizarTabelaMembros);
   document.getElementById('filterSearchVisitante')?.addEventListener('input', renderizarTabelaVisitantes);
-  document.getElementById('filterVisitantesMes')?.addEventListener('change', renderizarTabelaVisitantes);
-  document.getElementById('filterVisitantesAno')?.addEventListener('change', renderizarTabelaVisitantes);
-  document.getElementById('btnLimparFiltroVisitantes')?.addEventListener('click', () => {
-    const selMes = document.getElementById('filterVisitantesMes');
-    const selAno = document.getElementById('filterVisitantesAno');
-    if (selMes) selMes.value = 'todos';
-    if (selAno) selAno.value = 'todos';
-    renderizarTabelaVisitantes();
-  });
 
   // Controles do Calendário
   document.getElementById('btnCalPrev')?.addEventListener('click', () => {
@@ -2920,30 +2535,30 @@ function inicializarAppCompleta() {
   if (txtMsg) {
     txtMsg.value = config.msgWhatsapp || DEFAULT_CONFIG.msgWhatsapp;
     txtMsg.addEventListener('input', () => {
-      document.getElementById('previewWhatsappText').textContent = txtMsg.value.replace(/\{NOME\}/g, 'Moisés');
+      document.getElementById('previewWhatsappText').textContent = txtMsg.value.replace(/\{NOME\}/g, 'Moisés de Oliveira');
     });
-    document.getElementById('previewWhatsappText').textContent = (config.msgWhatsapp || DEFAULT_CONFIG.msgWhatsapp).replace(/\{NOME\}/g, 'Moisés');
+    document.getElementById('previewWhatsappText').textContent = (config.msgWhatsapp || DEFAULT_CONFIG.msgWhatsapp).replace(/\{NOME\}/g, 'Moisés de Oliveira');
   }
 
   const txtMsgVisitante = document.getElementById('txtConfigMsgVisitante');
   if (txtMsgVisitante) {
     txtMsgVisitante.value = config.msgWhatsappVisitante || DEFAULT_CONFIG.msgWhatsappVisitante;
     txtMsgVisitante.addEventListener('input', () => {
-      document.getElementById('previewWhatsappVisitanteText').textContent = txtMsgVisitante.value.replace(/\{NOME\}/g, 'João');
+      document.getElementById('previewWhatsappVisitanteText').textContent = txtMsgVisitante.value.replace(/\{NOME\}/g, 'João da Silva');
     });
-    document.getElementById('previewWhatsappVisitanteText').textContent = (config.msgWhatsappVisitante || DEFAULT_CONFIG.msgWhatsappVisitante).replace(/\{NOME\}/g, 'João');
+    document.getElementById('previewWhatsappVisitanteText').textContent = (config.msgWhatsappVisitante || DEFAULT_CONFIG.msgWhatsappVisitante).replace(/\{NOME\}/g, 'João da Silva');
   }
 
   window.preencherConfigForm = function () {
     const elMsg = document.getElementById('txtConfigMsgWhatsapp');
     const elPrev = document.getElementById('previewWhatsappText');
     if (elMsg) elMsg.value = config.msgWhatsapp || DEFAULT_CONFIG.msgWhatsapp;
-    if (elPrev) elPrev.textContent = (config.msgWhatsapp || DEFAULT_CONFIG.msgWhatsapp).replace(/\{NOME\}/g, 'Moisés');
+    if (elPrev) elPrev.textContent = (config.msgWhatsapp || DEFAULT_CONFIG.msgWhatsapp).replace(/\{NOME\}/g, 'Moisés de Oliveira');
 
     const elMsgVis = document.getElementById('txtConfigMsgVisitante');
     const elPrevVis = document.getElementById('previewWhatsappVisitanteText');
     if (elMsgVis) elMsgVis.value = config.msgWhatsappVisitante || DEFAULT_CONFIG.msgWhatsappVisitante;
-    if (elPrevVis) elPrevVis.textContent = (config.msgWhatsappVisitante || DEFAULT_CONFIG.msgWhatsappVisitante).replace(/\{NOME\}/g, 'João');
+    if (elPrevVis) elPrevVis.textContent = (config.msgWhatsappVisitante || DEFAULT_CONFIG.msgWhatsappVisitante).replace(/\{NOME\}/g, 'João da Silva');
 
     const elNome = document.getElementById('cfgNomeIgreja');
     const elCidade = document.getElementById('cfgCidadeIgreja');

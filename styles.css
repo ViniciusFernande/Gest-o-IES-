@@ -1,4 +1,4 @@
-/* ========================================================
+﻿/* ========================================================
    IGREJA EVANGÉLICA SEMENTEIRA (IES - PIEDADE)
    Painel de Gestão de Membros & Aniversariantes
    Paleta: Marrom Terra e Verde Broto / Limão Vibrante
@@ -1832,8 +1832,8 @@ body.sidebar-collapsed .main-wrapper {
 /* Relatórios & Impressão */
 .reports-options-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
   margin-bottom: 24px;
 }
 
@@ -2039,28 +2039,20 @@ body.sidebar-collapsed .main-wrapper {
 
 /* Estilos de Impressão */
 @media print {
-  html, body {
-    height: auto !important;
-    min-height: 0 !important;
-    overflow: visible !important;
-    background: #ffffff !important;
+  body {
+    background: #ffffff;
   }
-  .app-layout, .main-wrapper, .page-content, .view-section.active, .printable-sheet, .print-sheet-content {
-    display: block !important;
-    height: auto !important;
-    min-height: 0 !important;
-    overflow: visible !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    width: 100% !important;
-  }
-  .app-sidebar, .app-topbar, .action-buttons-group, .reports-options-grid, .btn, .btn-send-whatsapp-pill, .month-selector-wrapper, .no-print {
+  .app-sidebar, .app-topbar, .action-buttons-group, .reports-options-grid, .btn, .btn-send-whatsapp-pill, .month-selector-wrapper {
     display: none !important;
   }
+  .main-wrapper {
+    margin: 0 !important;
+    width: 100% !important;
+  }
   .printable-sheet {
-    border: none !important;
-    box-shadow: none !important;
-    padding: 0 !important;
+    border: none;
+    box-shadow: none;
+    padding: 0;
   }
 }
 
@@ -3049,55 +3041,6 @@ html {
   .form-row-2 {
     grid-template-columns: 1fr;
     gap: 12px;
-  }
-
-  /* Relatórios responsivos no celular / PWA */
-  #viewRelatorios {
-    width: 100%;
-    max-width: 100%;
-    overflow-x: hidden;
-  }
-
-  .reports-options-grid {
-    grid-template-columns: 1fr;
-    gap: 12px;
-    margin-bottom: 16px;
-  }
-
-  .report-box {
-    padding: 16px;
-  }
-
-  .printable-sheet {
-    padding: 18px 14px;
-    border-radius: var(--radius-md);
-    width: 100%;
-    max-width: 100%;
-    overflow: hidden;
-  }
-
-  .print-sheet-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-    padding-bottom: 14px;
-    margin-bottom: 14px;
-  }
-
-  .print-sheet-logo {
-    width: 52px;
-    height: 52px;
-  }
-
-  .print-sheet-content {
-    width: 100%;
-    max-width: 100%;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .print-sheet-content .data-table {
-    min-width: 540px;
   }
 
   /* Evita zoom automático no iPhone ao tocar em inputs */
