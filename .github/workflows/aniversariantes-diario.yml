@@ -1,0 +1,31 @@
+name: Notificar Aniversariantes no Telegram
+
+on:
+  schedule:
+    # Roda todo dia às 11:00 UTC (08:00 da manhã no horário de Brasília)
+    - cron: '0 11 * * *'
+  # Permite testar manualmente na aba "Actions" do GitHub
+  workflow_dispatch:
+
+jobs:
+  verificar-aniversariantes:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar código do repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Instalar Firebase Admin SDK
+        run: npm install --no-save firebase-admin
+
+      - name: Verificar aniversariantes e enviar no Telegram
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: node scripts/notificar-aniversariantes.js
