@@ -2,9 +2,7 @@
  * Script diário para verificar aniversariantes ativos no Firestore
  * e enviar notificação gratuita no Telegram com link direto para o WhatsApp.
  */
-const dns = require('dns');
-dns.setDefaultResultOrder('ipv4first');
-
+const https = require('https');
 const admin = require('firebase-admin');
 
 function escapeHtml(texto) {
@@ -26,39 +24,64 @@ function formatarLinkWhatsapp(telefone, nome) {
   return `https://wa.me/${digitos}?text=${encodeURIComponent(saudacao)}`;
 }
 
+function postHttpsIpv4(hostname, path, payload) {
+  return new Promise((resolve, reject) => {
+    const bodyStr = JSON.stringify(payload);
+    const req = https.request(
+      {
+        hostname,
+        port: 443,
+        path,
+        method: 'POST',
+        family: 4,
+        timeout: 20000,
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(bodyStr),
+        },
+      },
+      (res) => {
+        let raw = '';
+        res.on('data', (chunk) => (raw += chunk));
+        res.on('end', () => {
+          try {
+            resolve({ status: res.statusCode, data: JSON.parse(raw) });
+          } catch {
+            resolve({ status: res.statusCode, data: raw });
+          }
+        });
+      }
+    );
+
+    req.on('timeout', () => {
+      req.destroy(new Error('Timeout na requisição HTTPS (20s)'));
+    });
+    req.on('error', reject);
+    req.write(bodyStr);
+    req.end();
+  });
+}
+
 async function enviarTelegramComRetry(botToken, chatId, mensagem, tentativas = 3) {
-  const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+  const path = `/bot${botToken}/sendMessage`;
+  const payload = {
+    chat_id: chatId,
+    text: mensagem,
+    parse_mode: 'HTML',
+    disable_web_page_preview: true,
+  };
 
   for (let i = 1; i <= tentativas; i++) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 20000);
-
     try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text: mensagem,
-          parse_mode: 'HTML',
-          disable_web_page_preview: true,
-        }),
-        signal: controller.signal,
-      });
-
-      clearTimeout(timer);
-      const data = await res.json();
-
-      if (res.ok && data.ok) {
+      const { status, data } = await postHttpsIpv4('api.telegram.org', path, payload);
+      if (status >= 200 && status < 300 && data && data.ok) {
         return data;
       }
-
-      console.warn(`Tentativa ${i}/${tentativas} falhou (${res.status}): ${JSON.stringify(data)}`);
-      if (res.status < 500 && res.status !== 429) {
-        throw new Error(`Erro ao enviar via Telegram (${res.status}): ${JSON.stringify(data)}`);
+      console.warn(`Tentativa ${i}/${tentativas} falhou (${status}): ${JSON.stringify(data)}`);
+      if (status < 500 && status !== 429) {
+        throw new Error(`Erro ao enviar via Telegram (${status}): ${JSON.stringify(data)}`);
       }
     } catch (err) {
-      clearTimeout(timer);
       console.warn(`Tentativa ${i}/${tentativas} erro de rede/timeout:`, err.message);
       if (i === tentativas) throw err;
     }
