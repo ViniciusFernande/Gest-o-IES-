@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Script diário para verificar aniversariantes ativos no Firestore
  * e enviar notificação gratuita no Telegram com link direto para o WhatsApp.
  */
