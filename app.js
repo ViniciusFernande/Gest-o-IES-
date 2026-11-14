@@ -327,6 +327,7 @@ function iniciarSincronizacaoFirestore() {
   const unsubEventos = db.collection('eventos').onSnapshot((snapshot) => {
     eventos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     localStorage.setItem(STORAGE_EVENTOS, JSON.stringify(eventos));
+    limparEventosPontuaisPassados(true);
     atualizarTudo();
   }, (err) => {
     console.warn('Firestore Eventos aviso:', err);
@@ -418,6 +419,7 @@ function carregarDados() {
 
     const rawE = localStorage.getItem(STORAGE_EVENTOS);
     eventos = rawE ? JSON.parse(rawE) : getInitialEvents();
+    limparEventosPontuaisPassados(false);
 
     const rawC = localStorage.getItem(STORAGE_CONFIG);
     if (rawC) config = { ...DEFAULT_CONFIG, ...JSON.parse(rawC) };
@@ -701,7 +703,7 @@ function trocarVisualizacao(viewName) {
     'visitantes': 'Visitantes',
     'aniversariantes-dia': 'Aniversariantes do Dia',
     'aniversariantes-mes': 'Aniversariantes do Mês',
-    'eventos': 'Eventos',
+    'eventos': 'Programação',
     'calendario': 'Calendário',
     'membros-inativos': 'Membros Inativos',
     'relatorios': 'Relatórios',
@@ -1013,6 +1015,7 @@ function renderizarProximosEventos() {
   const iconsMap = {
     'Culto': { cls: 'event-icon-ceia', icon: 'ph-sparkle' },
     'Sala de Oração': { cls: 'event-icon-oracao', icon: 'ph-hands-praying' },
+    'Rota': { cls: 'event-icon-jovens', icon: 'ph-compass' },
     'Reunião': { cls: 'event-icon-reuniao', icon: 'ph-crown' },
     'Evento': { cls: 'event-icon-jovens', icon: 'ph-users' },
     'Oração': { cls: 'event-icon-oracao', icon: 'ph-hands-praying' },
@@ -1117,7 +1120,7 @@ function renderizarCalendarioMini() {
 
     evsNoDia.forEach(ev => {
       const dot = document.createElement('span');
-      const clsMap = { 'Culto':'culto', 'Sala de Oração':'outro', 'Reunião':'reuniao', 'Evento':'evento', 'Oração':'outro', 'Outro':'outro' };
+      const clsMap = { 'Culto':'culto', 'Sala de Oração':'outro', 'Rota':'rota', 'Reunião':'reuniao', 'Evento':'evento', 'Oração':'outro', 'Outro':'outro' };
       dot.className = 'cal-dot ' + (clsMap[ev.tipo] || 'outro');
       dot.title = ev.titulo;
       dotsWrap.appendChild(dot);
@@ -1583,6 +1586,47 @@ function selecionarMesAniversariante(idx) {
   renderizarTabelaAniversariantesMes();
 }
 
+
+function getHojeIsoLocal() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function limparEventosPontuaisPassados(sincronizarFirestore = false) {
+  if (!Array.isArray(eventos) || eventos.length === 0) return false;
+  const hojeIso = getHojeIsoLocal();
+  const expirados = [];
+  const restantes = [];
+
+  eventos.forEach(ev => {
+    const isPontual = !ev.recorrente;
+    const temDataValida = typeof ev.data === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(ev.data);
+    if (isPontual && temDataValida && ev.data < hojeIso) {
+      expirados.push(ev);
+    } else {
+      restantes.push(ev);
+    }
+  });
+
+  if (expirados.length === 0) return false;
+
+  eventos = restantes;
+  localStorage.setItem(STORAGE_EVENTOS, JSON.stringify(eventos));
+
+  if (sincronizarFirestore && db && isUserAdmin()) {
+    expirados.forEach(ev => {
+      if (ev.id) {
+        db.collection('eventos').doc(ev.id).delete().catch(err => {
+          console.warn('Erro ao excluir evento passado no Firestore:', err);
+        });
+      }
+    });
+  }
+  return true;
+}
 // ================= GESTÃO DE EVENTOS =================
 function renderizarTabelaEventos() {
   const tbody = document.getElementById('tbodyEventos');
@@ -1705,7 +1749,7 @@ function renderizarCalendarioGrande() {
 
     evsNoDia.forEach(ev => {
       const dot = document.createElement('span');
-      const clsMap = { 'Culto':'culto', 'Sala de Oração':'outro', 'Reunião':'reuniao', 'Evento':'evento', 'Oração':'outro', 'Outro':'outro' };
+      const clsMap = { 'Culto':'culto', 'Sala de Oração':'outro', 'Rota':'rota', 'Reunião':'reuniao', 'Evento':'evento', 'Oração':'outro', 'Outro':'outro' };
       dot.className = 'cal-dot ' + (clsMap[ev.tipo] || 'outro');
       dot.title = ev.titulo;
       dotsWrap.appendChild(dot);
@@ -2395,7 +2439,7 @@ function gerarRelatorioEventos() {
   const elDate = document.getElementById('printSheetDate');
   const content = document.getElementById('printSheetContent');
 
-  if (elTitle) elTitle.textContent = 'Agenda de Eventos da Igreja';
+  if (elTitle) elTitle.textContent = 'Agenda de Programação da Igreja';
   if (elDate) elDate.textContent = `Emitido em ${new Date().toLocaleDateString('pt-BR')}`;
 
   if (!content) return;

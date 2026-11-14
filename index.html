@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -146,7 +146,7 @@
 
         <button class="nav-link" data-view="eventos" id="navEventos">
           <span class="nav-icon"><i class="ph-fill ph-calendar-star"></i></span>
-          <span class="nav-label">Eventos</span>
+          <span class="nav-label">Programação</span>
         </button>
 
         <button class="nav-link" data-view="calendario" id="navCalendario">
@@ -428,6 +428,7 @@
                   <div class="legend-item"><span class="dot-indicator dot-niver"></span> Aniversariante</div>
                   <div class="legend-item"><span class="dot-indicator dot-culto"></span> Culto</div>
                   <div class="legend-item"><span class="dot-indicator dot-outro"></span> Sala de Oração</div>
+                  <div class="legend-item"><span class="dot-indicator dot-rota"></span> Rota</div>
                   <div class="legend-item"><span class="dot-indicator dot-reuniao"></span> Reunião</div>
                   <div class="legend-item"><span class="dot-indicator dot-evento"></span> Evento</div>
                 </div>
@@ -488,7 +489,7 @@
               <div class="dash-card-header">
                 <div class="dash-card-title">
                   <i class="ph-fill ph-bell-ringing icon-accent"></i>
-                  <h3>Próximos eventos da igreja</h3>
+                  <h3>Próximas Programações da Igreja</h3>
                 </div>
                 <button class="card-header-link" id="linkVerTodosEventos">Ver todos &rarr;</button>
               </div>
@@ -692,6 +693,7 @@
                   <div class="legend-item"><span class="dot-indicator dot-niver"></span> Aniversariante</div>
                   <div class="legend-item"><span class="dot-indicator dot-culto"></span> Culto</div>
                   <div class="legend-item"><span class="dot-indicator dot-outro"></span> Sala de Oração</div>
+                  <div class="legend-item"><span class="dot-indicator dot-rota"></span> Rota</div>
                   <div class="legend-item"><span class="dot-indicator dot-reuniao"></span> Reunião</div>
                   <div class="legend-item"><span class="dot-indicator dot-evento"></span> Evento</div>
                 </div>
@@ -816,7 +818,7 @@
             </div>
             <div class="report-box clickable-report" id="btnReportEventos" onclick="selecionarRelatorio('eventos')">
               <i class="ph-fill ph-calendar-blank"></i>
-              <h4>Agenda de Eventos da Igreja</h4>
+              <h4>Agenda de Programação da Igreja</h4>
               <p>Programação dos cultos, vigílias e encontros.</p>
             </div>
           </div>
@@ -1090,8 +1092,9 @@
               <select id="eventoTipo" class="form-control">
                 <option value="Culto">Culto</option>
                 <option value="Sala de Oração">Sala de Oração</option>
+                <option value="Rota">Rota</option>
                 <option value="Reunião">Reunião</option>
-                <option value="Evento">Evento / Festa</option>
+                <option value="Evento">Evento</option>
                 <option value="Oração">Campanha de Oração</option>
               </select>
             </div>
@@ -1199,6 +1202,6 @@
 
   <div class="app-toast-container" id="toastContainer"></div>
 
-  <script src="app.js?v=4.4"></script>
+  <script src="app.js?v=4.5"></script>
 </body>
 </html>

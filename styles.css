@@ -1,4 +1,4 @@
-/* ========================================================
+﻿/* ========================================================
    IGREJA EVANGÉLICA SEMENTEIRA (IES - PIEDADE)
    Painel de Gestão de Membros & Aniversariantes
    Paleta: Marrom Terra e Verde Broto / Limão Vibrante
@@ -1251,6 +1251,7 @@ body.sidebar-collapsed .main-wrapper {
 .cal-dot.evento { background: #f97316; }
 .cal-dot.reuniao { background: #10b981; }
 .cal-dot.outro { background: #8b5cf6; }
+.cal-dot.rota { background: #06b6d4; }
 
 .cal-event-legend {
   display: flex;
@@ -1282,6 +1283,7 @@ body.sidebar-collapsed .main-wrapper {
 .dot-indicator.dot-evento { background: #f97316; }
 .dot-indicator.dot-reuniao { background: #10b981; }
 .dot-indicator.dot-outro { background: #8b5cf6; }
+.dot-indicator.dot-rota { background: #06b6d4; }
 /* ================= 4. GRADE SECUNDÁRIA DO DASHBOARD ================= */
 .secondary-dashboard-grid {
   display: grid;
