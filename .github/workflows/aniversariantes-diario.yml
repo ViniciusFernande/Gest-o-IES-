@@ -1,10 +1,7 @@
 name: Notificar Aniversariantes no Telegram
 
 on:
-  schedule:
-    # Roda todo dia às 11:00 UTC (08:00 da manhã no horário de Brasília)
-    - cron: '0 11 * * *'
-  # Permite testar manualmente na aba "Actions" do GitHub
+  # Disparado pontualmente às 06:00 (Brasília) via cron-job.org ou manualmente no GitHub
   workflow_dispatch:
 
 jobs:
